@@ -1,5 +1,8 @@
 # Retirement Tax & Roth Conversion Planner
 
+            ***** Not a financial advise *****
+      ***** Read assumptions and limitations *****
+
 A single-file, browser-based tool with two tabs:
 
 | Tab | What it does |
