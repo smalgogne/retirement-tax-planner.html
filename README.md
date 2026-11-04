@@ -8,10 +8,20 @@ RETIREMENT TAX & ROTH CONVERSION PLANNER
             ***** Not a financial advise *****
       ***** Read assumptions and limitations *****
 
-A single-file, browser-based tool for projecting retirement income, taxes,
-withdrawals, and Roth conversions from today through your expected age of death.
-No server, no build step, no dependencies. All calculations run locally in the
-browser.
+RETIREMENT TAX & ROTH CONVERSION PLANNER
+========================================
+
+A single-file, browser-based tool with two tabs:
+
+  Planner     Projects retirement income, taxes, withdrawals, and Roth
+              conversions from today through your expected age of death, with
+              charts and a Monte Carlo analysis.
+  Cash Flow   Imports bank, credit card, and rental statements, categorizes
+              and cleans them, and builds a cash flow projection that can use
+              the Planner as its base and feed spending back into it.
+
+No server, no build step, no dependencies. All calculations run locally in
+the browser.
 
 DISCLAIMER: This is an estimation tool for planning and education. It is not
 tax, legal, or financial advice. Tax law is simplified (see "Assumptions and
@@ -22,14 +32,17 @@ QUICK START
 -----------
 1. Download retirement-tax-planner.html.
 2. Open it in any modern browser (Chrome, Edge, Firefox, Safari).
-3. Enter your profile, accounts, and milestones. Results update as you type.
+3. On the Planner tab, enter your profile, accounts, and milestones. Results
+   update as you type.
+4. Optional: open the Cash Flow tab and drop statement files.
 
 Optional: host it with GitHub Pages by placing the file in your repo (for
 example as index.html) and enabling Pages in the repo settings.
 
 
-FEATURES
---------
+PLANNER TAB
+===========
+
 Profile
   - Date of birth (current age is calculated), gender, employment start date
   - Current income and expected growth rate
@@ -43,7 +56,7 @@ Funding
   - Balance as-of age: balances recorded at a younger age are grown to today
     using the return rate and contributions
   - Default Cash row plus an "Add cash row" button
-  - CSV import (see "CSV import format")
+  - CSV import (see "Account CSV import format")
   - Pre-tax (traditional) contributions reduce taxable wages in working
     years; all contributions end at retirement
 
@@ -81,21 +94,111 @@ Roth conversion
   - Side-by-side comparison against no conversion: lifetime tax, after-tax
     estate, and a plain-language assessment
 
-Results
-  - Projection chart with y-axis, gridlines, and hover tooltips
+Results and charts
+  - Three charts, each with a labeled y-axis, light gridlines, and hover
+    tooltips: total balance (with plan vs no conversion), annual tax, and
+    pre-tax vs Roth balances
+  - A dashed vertical line marks the retirement age on every chart
+  - Triangle markers on the bottom axis show where each tax event (orange)
+    and planned spending item (purple) starts; hover for details
   - Income and inferred tax rates (effective and marginal) at milestone ages
-  - Year-by-year table (age through total balances)
+  - Year-by-year table (balances, withdrawals, RMDs, conversions, taxes,
+    dependent credit, planned spend)
   - Monte Carlo analysis: configurable trials and volatility, success rate
     with and without conversion, median and percentile after-tax estate, and
-    a percentile-band chart with hover tooltips
+    a percentile-band chart
 
 Snapshots
   - Save, load, and delete named snapshots in browser storage
   - Export/Import JSON for backup and moving between devices
+  - Snapshots cover Planner inputs only; Cash Flow data is saved separately
 
 
-CSV IMPORT FORMAT
------------------
+CASH FLOW TAB
+=============
+
+Importing statements
+  - Drop files (or click) for bank, credit card, or rental statements.
+    Formats: CSV, OFX, QFX. PDF statements are not supported; download CSV or
+    OFX from your bank instead.
+  - Choose the type for each file (Bank, Credit card, Rental); it can be
+    changed per file afterward.
+  - CSV columns are detected from the header (date, description, amount, or
+    separate debit/credit columns). Credit card exports often show charges
+    as positive; the tool guesses and sets a "flip sign" box per file that
+    you can toggle.
+  - Optional From/To date range limits everything on the tab.
+
+Categorization
+  - Bank files: home spending categories (Housing, Utilities, Groceries,
+    Dining, Transportation, Medical, Healthcare, Insurance, Entertainment,
+    Shopping, Travel, Education, Kid allowance, Personal & family, Gifts &
+    charity, Taxes, Investment (me), Investment (kids), plus Income)
+  - Credit card files: card-style categories (for example Restaurants, Gas &
+    auto, Bills & utilities, Health & wellness, Fees & interest)
+  - Rental files: IRS Schedule E categories (Advertising, Auto and travel,
+    Cleaning and maintenance, Commissions, Insurance, Legal and professional
+    fees, Management fees, Mortgage interest, Other interest, Repairs,
+    Supplies, Taxes, Utilities, Rents received, Other expenses)
+  - Categories come from keyword rules and are approximate. Review the
+    Uncategorized and flagged items.
+  - Custom categories: add a name, optionally with comma-separated keywords
+    that auto-match descriptions (custom rules take priority over built-in
+    ones). Custom categories appear in every category list and summary.
+  - Changing a category can apply to all transactions with the same
+    description (checkbox, on by default) or to that row only.
+
+Cleanup
+  - Duplicates across overlapping statements are removed (same date, amount,
+    and normalized description). Identical repeats inside a single file are
+    kept.
+  - Transfers and credit card payments are ignored to avoid double counting
+    (investment transfers are kept and categorized as Investment)
+  - Exceptional items are flagged: amounts at or above a threshold (default
+    $5,000) or keywords such as refund, claim, settlement, wire, bonus,
+    closing, escrow, tuition. By default flagged items are ignored; this can
+    be turned off, and any line can be included or ignored individually.
+
+Review and edit transactions
+  - Sort by clicking any column header (Ignored, Date, Description, Kind,
+    Category, Amount, Flag)
+  - Filter: all, flagged exceptional, transfers, uncategorized, ignored
+  - Edit any transaction (date, description, amount where negative is
+    outflow, kind); revert edited imports to their original values
+  - Add and delete manual transactions
+
+Summary and suggestions
+  - Spending summary by category with drill-down: category, then merchant,
+    then individual transactions
+  - View amounts per month, quarter, or year (same frequencies as tax
+    events), alongside totals
+  - Suggestions flag: missing statement months, no housing/insurance/
+    healthcare/tax payments found, uncategorized and flagged items, ignored
+    transfers, recurring charges (possible subscriptions), a short data
+    span, spending above statement income, and rental gaps (insurance,
+    taxes, repairs, interest, utilities)
+
+Cash flow projection
+  - Horizon comes from the Planner: current age to expected age of death,
+    with the retirement line and event markers on the chart
+  - Base: Planner (income, taxes, portfolio withdrawals, planned spending and
+    contributions from the Planner, compared against statement-based living
+    spending) or Statements only (income and spending annualized from the
+    statements)
+  - Living spending is inflated; set retirement spending as a percentage of
+    current spending, or override the spending amount
+  - Option to include net rental income
+  - Shows years with shortfall, first shortfall age, average and cumulative
+    net, a cash in vs cash out chart, and a year-by-year table
+  - "Use as desired income in planner" sets the Planner's desired income to
+    statement living spending plus estimated retirement-year tax
+  - "Use net rental as other income in planner" pushes annualized net rental
+    income into the Planner's other income (taxable, flat) and removes it
+    from the Cash Flow projection to avoid double counting
+
+
+ACCOUNT CSV IMPORT FORMAT (PLANNER FUNDING)
+-------------------------------------------
 One account per line, no header row required:
 
   name,type,balance,return%,contribution,frequency,balance-as-of-age
@@ -110,8 +213,8 @@ Example:
   Savings,cash,25000,3,0,1
 
 
-HOW THE MODEL WORKS
--------------------
+HOW THE PLANNER MODEL WORKS
+---------------------------
 Each year from current age to age of death:
   1. Contributions are added (working years only).
   2. Wages, other income, pension, Social Security, tax events, and cash
@@ -130,9 +233,15 @@ shock each year. A fixed random seed makes results repeatable. "Success" means
 total savings never hit zero from retirement through the age of death. Both
 strategies use the same random returns so they are directly comparable.
 
+Note: a Roth conversion moves money between buckets, so the total balance
+changes only by the tax paid. The benefit shows up in lower later RMDs and
+taxes and in the after-tax estate; use the annual tax and pre-tax/Roth
+charts to see it.
+
 
 ASSUMPTIONS AND LIMITATIONS
 ---------------------------
+Planner
   - Federal brackets and standard deductions use 2025 values, indexed
     forward by your inflation rate. Tax-law changes are not modeled.
   - "MFJ" means married filing jointly. QW uses joint brackets.
@@ -141,7 +250,10 @@ ASSUMPTIONS AND LIMITATIONS
   - Social Security taxation uses the standard provisional-income formula,
     simplified (thresholds not indexed).
   - State tax is a flat rate on ordinary income.
-  - Dependents give a flat $2,000 credit each while they count as dependents.
+  - Dependents give a federal credit each year while they count as
+    dependents: $2,200 if under 17, $500 otherwise. Income phase-outs and
+    refundability limits are not modeled. The credit applies in working and
+    retirement years.
   - Taxable-account withdrawals are taxed at an effective 7.5%.
   - After-tax estate values pre-tax balances at a 24% heir tax rate.
   - IRA deduction limits, contribution limits, IRMAA, NIIT, AMT, and capital
@@ -154,16 +266,37 @@ ASSUMPTIONS AND LIMITATIONS
   - Shortfalls (accounts running out while funding spending) are reflected
     in balances going to zero; individual unfunded amounts are not flagged.
 
+Cash Flow
+  - Categorization is keyword-based and approximate; exceptional-item and
+    transfer detection are heuristics. Review the results.
+  - Statement data is annualized from the span of dates loaded (or the
+    selected date range). Short spans miss annual and seasonal costs.
+  - In Planner-base mode, living spending excludes the Taxes category (the
+    Planner models income tax) and both Investment categories (the Planner
+    models contributions). Statements-only mode counts all outflows.
+  - Rental net income is pre-tax and untaxed in the Cash Flow projection
+    unless pushed to the Planner's other income. Depreciation is non-cash and
+    does not appear in statements.
+  - Card refunds reduce card spending; card payments are ignored.
+  - Statement living spending is inflated at the Planner's inflation rate.
+
 
 DATA AND PRIVACY
 ----------------
-  - Inputs live in memory only and reset on refresh unless saved as a
-    snapshot.
+  - Planner inputs live in memory only and reset on refresh unless saved as
+    a snapshot.
   - Snapshots are stored in your browser's local storage for this page
     (private to that browser and device). Clearing browser data or using
     private browsing will remove them. Use Export JSON for backups.
-  - Nothing is transmitted to any server. There are no analytics or external
-    requests.
+  - Cash Flow data (statements) lives in memory only unless you click "Save
+    to this browser", which stores the statement text, your edits, manual
+    transactions, category overrides, and custom categories in local
+    storage. "Clear all" removes it. Cash Flow data is not included in
+    snapshot JSON.
+  - Statement files are read in the browser. Nothing is transmitted to any
+    server. There are no analytics or external requests.
+  - Because statements contain sensitive financial detail, avoid saving them
+    on shared computers.
 
 
 FILES
@@ -175,11 +308,18 @@ FILES
 CONTRIBUTING
 ------------
 Issues and pull requests are welcome. Ideas for future work:
-  - Autosave of current inputs
+  - Autosave of current Planner inputs
+  - PDF statement parsing
   - Per-account volatility and asset-class modeling
   - Account-level contribution end ages
   - Shortfall warnings for planned spending
   - Updated tax tables by year and state-specific tax models
+  - Tax treatment of rental income inside the Cash Flow projection
+
+
+LICENSE
+-------
+Add your preferred license here (for example MIT) before publishing.
 
 
 LICENSE
