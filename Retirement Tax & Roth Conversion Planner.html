@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Retirement Tax & Roth Conversion Planner</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1d2330;--mu:#667085;--bd:#dde1e8;--ac:#1f6feb;--g:#1a7f4b;--r:#b42318;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12151c;--card:#1b202b;--tx:#e8ebf1;--mu:#98a2b3;--bd:#2d3444;--ac:#5b9bff;--g:#4cc38a;--r:#ff7b72;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;padding:12px}
+h1{font-size:20px;margin:4px 0 2px}h2{font-size:15px;margin:0 0 8px}.sub{color:var(--mu);margin-bottom:12px}
+.grid{display:flex;flex-direction:column;gap:12px;max-width:1020px;margin:0 auto}h1,.sub{max-width:1020px;margin-left:auto;margin-right:auto}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;min-width:0}
+.card.w{grid-column:1/-1}
+label{display:block;font-size:12px;color:var(--mu);margin:6px 0 2px}
+input,select,textarea,button{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:5px 7px;width:100%}
+button{width:auto;cursor:pointer;background:var(--ac);color:#fff;border:0;padding:6px 12px}button.s{background:var(--bg);color:var(--tx);border:1px solid var(--bd)}
+.row{display:flex;gap:4px;margin-bottom:4px;align-items:center}.row>*{min-width:0}.row button{padding:5px 8px}
+.kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.kp div{background:var(--bg);border-radius:8px;padding:8px}.kp b{display:block;font-size:17px}.kp span{font-size:11px;color:var(--mu)}
+.sc{overflow-x:auto;max-height:380px}table{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}
+th,td{padding:4px 5px;text-align:right;border-bottom:1px solid var(--bd)}th{position:sticky;top:0;background:var(--card)}td:first-child,th:first-child{text-align:left}
+.n{color:var(--mu);font-size:12px}.g{color:var(--g)}.r{color:var(--r)}.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+</style></head><body>
+<h1>Retirement Tax &amp; Roth Conversion Planner</h1>
+<div class="sub">Estimates only, not tax advice. Uses 2025 federal brackets indexed by your inflation rate. Filing status MFJ = married filing jointly.</div>
+<div class="grid">
+<div class="card"><h2>Profile</h2><div id="gp"></div><div class="n" id="ageInfo"></div></div>
+<div class="card"><h2>Funding: savings &amp; investments</h2>
+<div class="n">Add rows for each account or a custom contribution. Balances can be imported from CSV: name,type(pretax/roth/taxable/hsa/cash),balance,return%,contribution,freq(1 or 12),balance as-of age. Bal. age = your age when the balance was recorded (blank = current age); older balances are grown to today at the return rate plus contributions.</div>
+<div id="accts"></div><div class="row"><button class="s" onclick="add('accts')">+ Add row</button><button class="s" onclick="addCash()">+ Add cash row</button><button class="s" onclick="$('csv').click()">Import CSV</button><input type="file" id="csv" accept=".csv,.txt" hidden></div>
+<datalist id="dl"><option>401(k)<option>403(b)<option>Traditional IRA<option>Roth IRA<option>Roth 401(k)<option>Brokerage<option>HSA<option>Custom contribution</datalist></div>
+<div class="card"><h2>Milestones</h2><div id="gm"></div><div class="n" id="ssInfo"></div></div>
+<div class="card"><h2>Filing status changes &amp; dependents</h2>
+<label>Status changes (age → status). Spouse loss age switches MFJ to S automatically.</label><div id="chg"></div><button class="s" onclick="add('chg')">+ Add change</button>
+<label>Dependents (current age, age they lose dependent status)</label><div id="deps"></div><button class="s" onclick="add('deps')">+ Add dependent</button></div>
+<div class="card w"><h2>Tax events schedule</h2><div class="n">Amount is taxable income (negative = deduction). One time uses the date; recurring uses frequency and start date; time period adds an end date.</div><div id="events"></div><button class="s" onclick="add('events')">+ Add event</button></div>
+<div class="card w"><h2>Planned spending</h2><div class="n">Large planned costs such as college, a car or a home project. Enter amounts in today’s dollars (inflated to the year they occur). One time uses the date; recurring uses frequency and start date; time period adds an end date. Funded from your accounts using the withdrawal order below, so withdrawals are taxed accordingly.</div><div id="spend"></div><button class="s" onclick="add('spend')">+ Add spending</button></div>
+<div class="card"><h2>Income strategy &amp; Roth conversion</h2><div id="gs"></div></div>
+<div class="card"><h2>Snapshots</h2><div class="row"><input id="sn" placeholder="Snapshot name"><button onclick="snapSave()">Save</button></div>
+<div class="row"><select id="sl"></select><button class="s" onclick="snapLoad()">Load</button><button class="s" onclick="snapDel()">Delete</button></div>
+<div class="row"><button class="s" onclick="$('js').value=JSON.stringify(snap())">Export JSON</button><button class="s" onclick="try{restore(JSON.parse($('js').value))}catch(e){alert('Invalid JSON')}">Import JSON</button></div>
+<textarea id="js" rows="3" placeholder="Paste or copy snapshot JSON here"></textarea><div class="n" id="snMsg"></div></div>
+<div class="card w"><h2>Results</h2><div class="kp" id="kp"></div><p id="assess"></p><svg id="ch" viewBox="0 0 600 190" style="width:100%"></svg>
+<h2 style="margin-top:14px">Monte Carlo analysis</h2><div class="row"><button onclick="mc()">Run Monte Carlo</button><span class="n">Returns vary randomly around each account’s return rate (cash stays fixed). Set trials and volatility under Income strategy.</span></div><div class="kp" id="mc"></div><svg id="mcch" viewBox="0 0 600 190" style="width:100%"></svg></div>
+<div class="card w"><h2>Income &amp; inferred tax rate at milestones</h2><div class="sc"><table id="ms"></table></div></div>
+<div class="card w"><h2>Year-by-year projection (nominal $, with Roth conversion plan)</h2><div class="sc"><table id="yr"></table></div></div>
+</div>
+<script>
+const $=id=>document.getElementById(id),fmt=n=>(n<0?'-':'')+'$'+Math.round(Math.abs(n)).toLocaleString(),pc=n=>(n*100).toFixed(1)+'%';
+const SO='S:Single|MFJ:Married joint|MFS:Married separate|HOH:Head of household|QW:Qualifying widow(er)';
+const F=[
+['gp','dob','Date of birth','date','1966-01-01'],['gp','gender','Gender','sel','M','M:Male|F:Female'],['gp','emp','Employment start date (if it affects pension)','date',''],
+['gp','inc','Current income $','number',150000],['gp','gr','Expected income growth %','number',3],['gp','oth','Other ongoing income $/yr','number',0],
+['gp','othEnd','Other income ends at age (blank = retirement)','number',''],['gp','fed','Current federal tax rate % (used in working years)','number',22],['gp','st','State tax rate % (optional)','number',0],['gp','inf','Inflation %','number',2],
+['gm','ret','Retirement age','number',65],['gm','ssAge','Claim Social Security at age','number',67],['gm','pia','Est. monthly Social Security at 67 $','number',3000],
+['gm','pMode','Pension calculation','sel','man','man:Manual amount|fers:FERS (OPM formula)'],['gm','pAge','Pension start age (blank = retirement age for FERS)','number',''],['gm','pAmt','Manual pension $/yr','number',0],['gm','high3','FERS high-3 average salary $ (blank = estimate from income)','number',''],['gm','rmd','RMD age','sel','75','73:73|75:75'],
+['gm','death','Expected age of death','number',85],['gm','fs','Initial filing status','sel','MFJ',SO],
+['gm','sAge','Spouse current age (if married)','number',''],['gm','sPia','Spouse monthly Social Security at 67 $','number',0],['gm','sSs','Spouse claim age','number',67],['gm','sLoss','Age you lose spouse (blank = never)','number',''],
+['gs','want','Desired yearly income, today $ (blank = withdrawal % of balance at retirement)','number',''],['gs','rate','Withdrawal rate %','number',3.9],['gs','mcN','Monte Carlo trials','number',500],['gs','mcVol','Investment volatility % (std dev of annual return)','number',12],
+['gs','strat','Withdrawal order','sel','opt','prop:Evenly pulled from all accounts|order:Taxable, then pre-tax, then Roth|opt:Optimized (fill low brackets with pre-tax first)'],
+['gs','cv','Roth conversion','sel','fill','none:None|fixed:Fixed $/yr (today $)|fill:Fill up to bracket'],['gs','cvAmt','Fixed conversion $/yr','number',50000],
+['gs','cvBr','Fill to top of bracket %','sel','22','12:12%|22:22%|24:24%|32:32%'],['gs','cvS','Conversion start age','number',65],['gs','cvE','Conversion end age','number',74],
+['gs','cvPay','Pay conversion tax from','sel','ext','ext:External sources (taxable account)|conv:Converted funds']];
+const COLS={accts:[['n','Account','text',3,0,'dl'],['t','Type','sel',2,'trad:Pre-tax|roth:Roth|tax:Taxable|hsa:HSA|cash:Cash'],['b','Balance $','number',2],['r','Return %','number',1],['c','Contrib $','number',2],['f','Freq','sel',2,'1:Yearly|12:Monthly'],['ba','Bal. age','number',1]],
+chg:[['age','At age','number',1],['fs','Status','sel',2,SO]],deps:[['n','Name','text',2],['age','Age now','number',1],['loss','Loses status at','number',1]],
+events:[['d','Description','text',3],['amt','Amount $','number',2],['ty','Type','sel',2,'once:One time|rec:Recurring|per:Time period'],['fr','Freq','sel',2,'1:Yearly|4:Quarterly|12:Monthly'],['s','Date / start','date',2],['e','End','date',2]]};
+COLS.spend=COLS.events;
+let ST={accts:[{n:'401(k)',t:'trad',b:500000,r:6,c:20000,f:1},{n:'Roth IRA',t:'roth',b:100000,r:6,c:0,f:1},{n:'Brokerage',t:'tax',b:150000,r:5,c:0,f:1},{n:'Cash',t:'cash',b:25000,r:3,c:0,f:1}],chg:[],deps:[],events:[],spend:[]};
+const mk=(f)=>{const[,k,l,t,d,o]=f;return`<label>${l}</label>`+(t=='sel'?`<select id="f_${k}">${o.split('|').map(x=>{const[v,n]=x.split(':');return`<option value="${v}"${v==d?' selected':''}>${n??v}</option>`}).join('')}</select>`:`<input id="f_${k}" type="${t}" value="${d}">`)};
+['gp','gm','gs'].forEach(g=>$(g).innerHTML=F.filter(f=>f[0]==g).map(mk).join(''));
+function draw(a){$(a).innerHTML=ST[a].map((r,i)=>`<div class="row">${COLS[a].map(([k,l,t,w,o,li])=>{const v=r[k]??'';const st=`style="flex:${w}"`;return t=='sel'?`<select ${st} data-a="${a}" data-i="${i}" data-k="${k}">${o.split('|').map(x=>{const[q,n]=x.split(':');return`<option value="${q}"${q==v?' selected':''}>${n}</option>`}).join('')}</select>`:`<input ${st} type="${t}" title="${l}" placeholder="${l}" value="${v}" data-a="${a}" data-i="${i}" data-k="${k}"${li?` list="${li}"`:''}>`}).join('')}<button class="s" onclick="del('${a}',${i})">×</button></div>`).join('')}
+function add(a){const d={accts:{n:'Custom',t:'trad',b:0,r:6,c:0,f:1,ba:''},chg:{age:75,fs:'S'},deps:{n:'Child',age:5,loss:18},events:{d:'',amt:0,ty:'once',fr:1,s:'',e:''},spend:{d:'',amt:0,ty:'once',fr:1,s:'',e:''}};ST[a].push(d[a]);draw(a);run()}
+function addCash(){ST.accts.push({n:'Cash',t:'cash',b:0,r:3,c:0,f:1,ba:''});draw('accts');run()}
+function del(a,i){ST[a].splice(i,1);draw(a);run()}
+document.addEventListener('input',e=>{const t=e.target;if(t.dataset.a){ST[t.dataset.a][t.dataset.i][t.dataset.k]=t.type=='number'?(t.value===''?'':+t.value):t.value}run()});
+$('f_gender').addEventListener('change',e=>{const d=$('f_death');if(d.value==85||d.value==88)d.value=e.target.value=='F'?88:85;run()});
+$('csv').onchange=e=>{const fr=new FileReader();fr.onload=()=>{const m={pretax:'trad',trad:'trad',roth:'roth',taxable:'tax',tax:'tax',hsa:'hsa',cash:'cash'};const rows=fr.result.split(/\r?\n/).map(l=>l.split(',').map(s=>s.trim())).filter(r=>r.length>=3&&!isNaN(+r[2]));if(rows.length)ST.accts=rows.map(r=>({n:r[0],t:m[(r[1]||'').toLowerCase()]||'tax',b:+r[2],r:+r[3]||6,c:+r[4]||0,f:+r[5]==12?12:1,ba:r[6]?+r[6]:''}));draw('accts');run()};fr.readAsText(e.target.files[0])};
+function read(){const v={};F.forEach(f=>{const e=$('f_'+f[1]);v[f[1]]=e.type=='number'?(e.value===''?'':+e.value):e.value});return v}
+function snap(){return{v:read(),ST}}
+function restore(s){F.forEach(f=>{if(s.v[f[1]]!==undefined)$('f_'+f[1]).value=s.v[f[1]]});ST=s.ST;ST.spend=ST.spend||[];['accts','chg','deps','events','spend'].forEach(draw);run()}
+const SK='rtp_snaps';const gs=()=>{try{return JSON.parse(localStorage.getItem(SK)||'{}')}catch(e){return{}}};
+function sl(){const s=gs();$('sl').innerHTML=Object.keys(s).map(k=>`<option>${k}</option>`).join('')||'<option value="">(none saved)</option>'}
+function snapSave(){const n=$('sn').value.trim()||new Date().toLocaleString();const s=gs();s[n]=snap();try{localStorage.setItem(SK,JSON.stringify(s));$('snMsg').textContent='Saved "'+n+'" in this browser.'}catch(e){$('snMsg').textContent='Browser storage unavailable. Use Export JSON and keep the text.'}sl();$('sl').value=n}
+function snapLoad(){const s=gs()[$('sl').value];if(s)restore(s)}
+function snapDel(){const s=gs();delete s[$('sl').value];try{localStorage.setItem(SK,JSON.stringify(s))}catch(e){}sl()}
+// ---- tax engine
+const R=[.1,.12,.22,.24,.32,.35,.37],MJ=[23850,96950,206700,394600,501050,751600];
+const TH={S:[11925,48475,103350,197300,250525,626350],MFJ:MJ,QW:MJ,HOH:[17000,64850,103350,197300,250500,626350],MFS:[11925,48475,103350,197300,250525,375800]};
+const SD={S:15750,MFJ:31500,QW:31500,MFS:15750,HOH:23625};
+const DV=[26.5,25.5,24.6,23.7,22.9,22,21.1,20.2,19.4,18.5,17.7,16.8,16,15.2,14.4,13.7,12.9,12.2,11.5,10.8,10.1,9.5,8.9,8.4,7.8,7.3,6.8,6.4];
+function br(ti,fs,f){const T=TH[fs];let p=0,tx=0,r=R[0];for(let i=0;i<7;i++){const hi=i<6?T[i]*f:1e15;if(ti>p){tx+=(Math.min(ti,hi)-p)*R[i];r=R[i]}p=hi}return[tx,r]}
+function ssTax(ss,oi,fs){if(!ss)return 0;const b=fs=='MFJ'||fs=='QW'?[32e3,44e3]:fs=='MFS'?[0,0]:[25e3,34e3],pi=oi+ss/2;if(pi<=b[0])return 0;const t=pi<=b[1]?.5*(pi-b[0]):.85*(pi-b[1])+Math.min(.5*ss,.5*(b[1]-b[0]));return Math.min(t,.85*ss)}
+function yt(ord,ss,fs,f,cr){const ts=ssTax(ss,ord,fs),ti=Math.max(0,ord+ts-SD[fs]*f),[x,r]=br(ti,fs,f);return{fed:Math.max(0,x-cr),ti,r}}
+const claim=(p,a)=>{if(a<67){const m=(67-a)*12;return p*(1-(m<=36?m*5/900:36*5/900+(m-36)*5/1200))}return p*(1+.08*(Math.min(a,70)-67))};
+const age0=v=>v.dob?Math.floor((Date.now()-new Date(v.dob))/31557600000):60;
+function fers(v){if(!v.emp)return null;const af=v.dob?(Date.now()-new Date(v.dob))/31557600000:60,sv=Math.max(0,v.ret-af+(Date.now()-new Date(v.emp))/31557600000),n=v.ret-Math.floor(af),h3=v.high3!==''?+v.high3:[1,2,3].reduce((s,k)=>s+v.inc*Math.pow(1+v.gr/100,Math.max(0,n-k)),0)/3,m=v.ret>=62&&sv>=20?.011:.01,i=v.inf/100,cola=i<=.02?i:i<=.03?.02:i-.01;return{amt:m*h3*sv,sv,h3,m,cola,start:v.pAge!==''?+v.pAge:v.ret}}
+function sim(v,conv,Z){
+ const a0=age0(v),inf=v.inf/100,Y=new Date().getFullYear(),A=ST.accts.map(x=>{const r=(+x.r||0)/100,c=(+x.c||0)*(+x.f==12?12:1),n=x.ba!==''&&x.ba!==undefined?Math.max(0,a0-x.ba):0;let b=+x.b||0;if(n)b=b*Math.pow(1+r,n)+(r?c*(Math.pow(1+r,n)-1)/r:c*n);return{t:x.t=='hsa'?'roth':x.t,b,r,c}});
+ const bal=ty=>A.filter(x=>x.t==ty).reduce((s,x)=>s+x.b,0),all=()=>bal('trad')+bal('roth')+bal('tax')+bal('cash');
+ const take=(ty,amt)=>{const B=bal(ty);if(B<=0||amt<=0)return 0;const g=Math.min(amt,B);A.forEach(x=>{if(x.t==ty)x.b-=g*x.b/B});return g};
+ const put=(ty,amt)=>{let x=A.find(y=>y.t==ty);if(!x){x={t:ty,b:0,r:.03,c:0};A.push(x)}x.b+=amt};
+ const chg=ST.chg.filter(c=>c.age!=='').map(c=>({age:+c.age,fs:c.fs}));if(v.sLoss!=='')chg.push({age:+v.sLoss,fs:'S'});chg.sort((a,b)=>a.age-b.age);
+ const rows=[];let base=null,life=0,convTax=0,short=0,firstConv=null;
+ for(let t=0,a=a0;a<=v.death;t++,a++){
+  const f=Math.pow(1+inf,t);let fs=v.fs;chg.forEach(c=>{if(a>=c.age)fs=c.fs});
+  const work=a<v.ret;if(work)A.forEach(x=>x.b+=x.c);
+  const wages=work?v.inc*Math.pow(1+v.gr/100,t):0,oth=a<(v.othEnd===''?v.ret:v.othEnd)?+v.oth||0:0;
+  const FR=v.pMode=='fers'?fers(v):null,pen=v.pMode=='fers'?(FR&&a>=FR.start?FR.amt*Math.pow(1+FR.cola,Math.max(0,a-Math.max(62,FR.start))):0):(v.pAge!==''&&a>=v.pAge?+v.pAmt||0:0);
+  const own=a>=v.ssAge?claim(v.pia,v.ssAge)*12*f:0,sp=v.sAge!==''&&(v.sAge+t>=v.sSs)?claim(v.sPia,v.sSs)*12*f:0;
+  const lost=v.sLoss!==''&&a>=v.sLoss,ss=lost?Math.max(own,sp):own+(v.sAge!==''?sp:0);
+  let ev=0;ST.events.forEach(e=>{const m=+e.fr||1,am=+e.amt||0,sy=e.s?+e.s.slice(0,4):null,ey=e.e?+e.e.slice(0,4):null,y=Y+t;if(sy===null)return;if(e.ty=='once'&&y==sy)ev+=am;else if(e.ty=='rec'&&y>=sy)ev+=am*m;else if(e.ty=='per'&&y>=sy&&(ey===null||y<=ey))ev+=am*m});
+  let spd=0;ST.spend.forEach(e=>{const m=+e.fr||1,am=(+e.amt||0)*f,sy=e.s?+e.s.slice(0,4):null,ey=e.e?+e.e.slice(0,4):null,y=Y+t;if(sy===null)return;if(e.ty=='once'&&y==sy)spd+=am;else if(e.ty=='rec'&&y>=sy)spd+=am*m;else if(e.ty=='per'&&y>=sy&&(ey===null||y<=ey))spd+=am*m});
+  const cr=ST.deps.filter(d=>d.age!==''&&d.loss!==''&&+d.age+t<+d.loss).length*2000;
+  if(!work&&base===null)base=all()*v.rate/100;
+  const target=work?0:(v.want!==''?v.want*f:base*Math.pow(1+inf,a-v.ret));
+  const ci=A.filter(x=>x.t=='cash').reduce((s,x)=>s+x.b*x.r,0),pre=work?A.filter(x=>x.t=='trad').reduce((s,x)=>s+x.c,0):0,ordPre=wages+oth+pen+ev-pre,need=(work?0:Math.max(0,target-ss-ordPre))+spd;
+  const tradStart=bal('trad'),w={cash:0,tax:0,trad:0,roth:0};let rem=need;
+  const pull=(ty,lim)=>{const g=take(ty,Math.min(rem,lim));w[ty]+=g;rem-=g};
+  if(need>0){if(v.strat=='prop'){const tot=all(),sh={cash:bal('cash'),tax:bal('tax'),trad:bal('trad'),roth:bal('roth')};for(const ty in sh)w[ty]+=take(ty,Math.min(need,tot)*sh[ty]/(tot||1))}
+   else if(v.strat=='order'){pull('cash',1e15);pull('tax',1e15);pull('trad',1e15);pull('roth',1e15)}
+   else{const room=TH[fs][2]*f+SD[fs]*f-ordPre-.5*ss;pull('trad',Math.max(0,room));pull('cash',1e15);pull('tax',1e15);pull('roth',1e15);pull('trad',1e15)}}
+  let rmd=0;if(a>=v.rmd&&tradStart>0){rmd=tradStart/(DV[a-73]||6);if(w.trad<rmd){const ex=take('trad',rmd-w.trad);w.trad+=ex;put('tax',ex)}}
+  const ord=ordPre+ci+w.trad,stR=v.st/100;
+  const base0=yt(ord,ss,fs,f,cr);let fedB=work?v.fed/100*ord:base0.fed;
+  let cvAmt=0,cvT=0;
+  if(conv&&v.cv!='none'&&a>=v.cvS&&a<=v.cvE&&bal('trad')>0){
+   if(v.cv=='fixed')cvAmt=v.cvAmt*f;else{const i=R.findIndex(x=>Math.abs(x-v.cvBr/100)<1e-9);cvAmt=Math.max(0,TH[fs][i]*f-base0.ti)}
+   cvAmt=Math.min(cvAmt,bal('trad'));
+   if(cvAmt>0){cvT=yt(ord+cvAmt,ss,fs,f,cr).fed-base0.fed+stR*cvAmt;take('trad',cvAmt);firstConv??=cvT;
+    if(v.cvPay=='conv'){put('roth',cvAmt-cvT)}else{put('roth',cvAmt);let g=take('cash',cvT);g+=take('tax',cvT-g);if(g<cvT){const g2=take('roth',cvT-g);if(g+g2<cvT)short++;else short+=0;if(g<cvT)short+=1}}
+    convTax+=cvT}}
+  const tax=fedB+stR*(ord)+.075*w.tax+cvT;life+=tax;
+  const gross=wages+ss+pen+oth+ev+w.cash+w.tax+w.trad+w.roth;
+  const tiF=yt(ord+cvAmt,ss,fs,f,cr);
+  A.forEach(x=>x.b*=Math.max(.05,1+x.r+(Z&&x.t!='cash'?v.mcVol/100*Z[t]:0)));
+  rows.push({a,fs,f,wages,ss,spd,pen,wd:w.cash+w.tax+w.trad+w.roth,rmd,cv:cvAmt,cvT,tax,gross,eff:gross>0?tax/gross:0,mr:work?v.fed/100:tiF.r+(stR),bal:all(),trad:bal('trad'),roth:bal('roth'),tx:bal('tax')+bal('cash')});
+ }
+ const L=rows[rows.length-1]||{trad:0,roth:0,tx:0,bal:0};
+ return{rows,life,convTax,short,est:L.trad*.76+L.roth+L.tx,end:L.bal,firstConv,a0}}
+function mc(){$('mc').innerHTML='<div><span>Running simulation…</span></div>';setTimeout(mcRun,30)}
+function mcRun(){const v=read(),a0=age0(v);if(!(v.death>a0)){$('mc').innerHTML='';return}
+ const N=Math.max(50,Math.min(3000,+v.mcN||500)),L=v.death-a0+1;let s=42;
+ const rnd=()=>{s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296},nrm=()=>Math.sqrt(-2*Math.log(rnd()||1e-9))*Math.cos(2*Math.PI*rnd());
+ const pb=[],est=[[],[]],ok=[0,0];
+ for(let i=0;i<N;i++){const Z=Array.from({length:L+1},nrm);[true,false].forEach((c,j)=>{const r=sim(v,c,Z);if(!r.rows.some(x=>x.a>=v.ret&&x.bal<1))ok[j]++;if(j==0)pb.push(r.rows.map(x=>x.bal));est[j].push(r.est)})}
+ const q=(a,p)=>{const x=[...a].sort((m,n)=>m-n);return x[Math.floor(p*(x.length-1))]};
+ const D=sim(v,true),cols=D.rows.map((_,i)=>pb.map(r=>r[i])),p10=cols.map(c=>q(c,.1)),p50=cols.map(c=>q(c,.5)),p90=cols.map(c=>q(c,.9));
+ $('mc').innerHTML=[['Success rate, with plan',pc(ok[0]/N)],['Success rate, no conversion',pc(ok[1]/N)],['Median after-tax estate (plan)',fmt(q(est[0],.5))],['Median estate (no conversion)',fmt(q(est[1],.5))],['Poor case, 10th pct (plan)',fmt(q(est[0],.1))],['Strong case, 90th pct (plan)',fmt(q(est[0],.9))]].map(x=>`<div><span>${x[0]}</span><b>${x[1]}</b></div>`).join('')+`<p class="n" style="grid-column:1/-1;margin:0">${N} trials. Success = savings are not depleted at any point from retirement to age ${v.death}. Same random returns are used for both strategies.</p>`;
+ const W=600,H=190,n=p50.length-1||1,mx=Math.max(...p90,1),X=i=>30+i*(W-40)/n,Y=b=>H-20-b/mx*(H-40),ln=a=>a.map((b,i)=>X(i)+','+Y(b)).join(' ');
+ const _mc=`<polygon fill="var(--ac)" opacity=".15" points="${ln(p90)} ${ln(p10.slice().reverse().map((b,i)=>b)).split(' ').map((_,i,arr)=>X(n-i)+','+Y(p10[n-i])).join(' ')}"/><polyline fill="none" stroke="var(--ac)" stroke-width="2.5" points="${ln(p50)}"/><polyline fill="none" stroke="var(--mu)" stroke-width="1.5" stroke-dasharray="4 3" points="${ln(D.rows.map(r=>r.bal))}"/><text x="30" y="12" font-size="11" fill="var(--ac)">Median (shaded: 10th–90th pct)</text><text x="250" y="12" font-size="11" fill="var(--mu)">Dashed: fixed-return projection</text><text x="${W-10}" y="12" font-size="11" fill="var(--mu)" text-anchor="end">Max ${fmt(mx)}</text><text x="30" y="${H-4}" font-size="11" fill="var(--mu)">Age ${a0}</text><text x="${W-10}" y="${H-4}" font-size="11" fill="var(--mu)" text-anchor="end">Age ${v.death}</text>`;
+ drawChart('mcch',D.rows.map(r=>r.a),[{n:'Median',c:'var(--ac)',v:p50,w:2.5},{n:'Fixed-return projection',c:'var(--mu)',v:D.rows.map(r=>r.bal),w:1.5,d:1}],{lo:p10,hi:p90})}
+function drawChart(id,lab,S,B){
+ const el=$(id),W=600,H=210,L=58,Rg=10,T=24,Bt=24,hi=B?B.hi:[],mx0=Math.max(...S.flatMap(s=>s.v),...hi,1),raw=mx0/4,p=Math.pow(10,Math.floor(Math.log10(raw))),st=[1,2,2.5,5,10].map(m=>m*p).find(s=>s>=raw),K=Math.ceil(mx0/st-1e-9),mx=K*st,n=lab.length-1||1,
+ X=i=>L+i*(W-L-Rg)/n,Y=b=>H-Bt-b/mx*(H-Bt-T),sh=v=>v>=1e6?'$'+(+(v/1e6).toFixed(2))+'M':v>=1e3?'$'+(+(v/1e3).toFixed(1))+'K':'$'+Math.round(v),pl=a=>a.map((b,i)=>X(i)+','+Y(b)).join(' ');
+ let g='';for(let k=0;k<=K;k++){const y=k*st;g+=`<line x1="${L}" x2="${W-Rg}" y1="${Y(y)}" y2="${Y(y)}" stroke="var(--bd)"/><text x="${L-6}" y="${Y(y)+3}" font-size="10" fill="var(--mu)" text-anchor="end">${sh(y)}</text>`}
+ const ts=Math.max(1,Math.ceil(n/8));for(let i=0;i<=n;i+=ts)g+=`<text x="${X(i)}" y="${H-8}" font-size="10" fill="var(--mu)" text-anchor="middle">${lab[i]}</text>`;
+ g+=`<line x1="${L}" x2="${L}" y1="${T}" y2="${H-Bt}" stroke="var(--mu)"/>`;
+ if(B)g+=`<polygon fill="var(--ac)" opacity=".15" points="${pl(B.hi)} ${B.lo.map((b,i)=>X(n-i)+','+Y(B.lo[n-i])).join(' ')}"/>`;
+ S.forEach((s,k)=>{g+=`<polyline fill="none" stroke="${s.c}" stroke-width="${s.w||2}"${s.d?' stroke-dasharray="4 3"':''} points="${pl(s.v)}"/><text x="${L+k*150}" y="13" font-size="11" fill="${s.c}">${s.n}</text>`});
+ g+=`<line id="${id}_l" y1="${T}" y2="${H-Bt}" stroke="var(--tx)" stroke-dasharray="3 3" visibility="hidden"/><g id="${id}_t" visibility="hidden"><rect rx="5" fill="var(--card)" stroke="var(--bd)"/></g>`;
+ el.setAttribute('viewBox',`0 0 ${W} ${H}`);el.style.touchAction='pan-y';el.innerHTML=g;
+ const ln=$(id+'_l'),tg=$(id+'_t'),rc=tg.firstChild;
+ el.onpointermove=e=>{const r=el.getBoundingClientRect(),xr=(e.clientX-r.left)/r.width*W,i=Math.max(0,Math.min(n,Math.round((xr-L)/(W-L-Rg)*n))),rows=['Age '+lab[i],...S.map(s=>s.n+': '+fmt(s.v[i])),...(B?['10th–90th pct: '+sh(B.lo[i])+' – '+sh(B.hi[i])]:[])];
+  ln.setAttribute('x1',X(i));ln.setAttribute('x2',X(i));ln.setAttribute('visibility','visible');
+  tg.querySelectorAll('text').forEach(t=>t.remove());const w=Math.max(...rows.map(t=>t.length))*5.8+14,h=rows.length*14+8,tx=X(i)>W/2?X(i)-w-8:X(i)+8;
+  rc.setAttribute('x',tx);rc.setAttribute('y',T);rc.setAttribute('width',w);rc.setAttribute('height',h);
+  rows.forEach((t,k)=>{const x=document.createElementNS('http://www.w3.org/2000/svg','text');x.setAttribute('x',tx+7);x.setAttribute('y',T+16+k*14);x.setAttribute('font-size','11');x.setAttribute('fill',k&&k<=S.length?S[k-1].c:'var(--tx)');x.textContent=t;tg.appendChild(x)});tg.setAttribute('visibility','visible')};
+ el.onpointerleave=()=>{ln.setAttribute('visibility','hidden');tg.setAttribute('visibility','hidden')}}
+function run(){
+ const v=read(),a0=age0(v);$('ageInfo').textContent='Current age: '+a0+(v.emp?' · Years of service at retirement: '+Math.max(0,v.ret-a0+ (new Date().getFullYear()-new Date(v.emp).getFullYear())):'');
+ $('ssInfo').textContent='Expected Social Security at claim age '+v.ssAge+': '+fmt(claim(v.pia,v.ssAge)*12)+'/yr'+(v.sAge!==''?' · Spouse: '+fmt(claim(v.sPia,v.sSs)*12)+'/yr':'')+' (today’s dollars; 8%/yr delayed credit to 70, reductions before 67)'+(v.pMode=='fers'?(()=>{const F=fers(v);return F?' · FERS pension: '+fmt(F.amt)+'/yr at retirement ('+(F.m*100).toFixed(1)+'% × high-3 '+fmt(F.h3)+' × '+F.sv.toFixed(1)+' yrs of service; COLA '+(F.cola*100).toFixed(1)+'% from age 62)':' · Enter your employment start date to calculate the FERS pension'})():'');
+ if(!(v.death>a0)){return}
+ const P=sim(v,true),N=sim(v,false),dT=P.life-N.life,dE=P.est-N.est;
+ $('kp').innerHTML=[['Lifetime tax (no conversion)',fmt(N.life)],['Lifetime tax (with plan)',fmt(P.life)],['Tax on conversions',fmt(P.convTax)],['After-tax estate (no conversion)',fmt(N.est)],['After-tax estate (with plan)',fmt(P.est)],['Estate difference',`<span class="${dE>=0?'g':'r'}">${fmt(dE)}</span>`]].map(x=>`<div><span>${x[0]}</span><b>${x[1]}</b></div>`).join('');
+ let msg='';
+ if(v.cv=='none')msg='Roth conversion is turned off. Choose Fixed or Fill bracket to evaluate it.';
+ else if(P.convTax==0)msg='No conversion occurred: check that your conversion ages fall in retirement years and that you hold pre-tax balances.';
+ else{msg=`Converting changes lifetime taxes by <b class="${dT<=0?'g':'r'}">${fmt(dT)}</b> and the after-tax estate (pre-tax balances valued at a 24% heir rate) by <b class="${dE>=0?'g':'r'}">${fmt(dE)}</b>. `+(dE>0?'Conversion looks beneficial under these assumptions. ':'Conversion does not improve the outcome under these assumptions. ')+(v.cvPay=='ext'?(P.short?'Warning: the taxable account could not fully cover conversion tax in some years, so Roth funds were used.':'Conversion tax is affordable from the taxable account.'):'Tax is withheld from converted funds, so less reaches the Roth.')}
+ $('assess').innerHTML=msg;
+ const W=600,H=190,mx=Math.max(...P.rows.map(r=>r.bal),...N.rows.map(r=>r.bal),1),n=P.rows.length-1||1,pt=R=>R.map((r,i)=>`${30+i*(W-40)/n},${H-20-(r.bal/mx)*(H-40)}`).join(' ');
+ const _ch=`<polyline fill="none" stroke="var(--mu)" stroke-width="2" points="${pt(N.rows)}"/><polyline fill="none" stroke="var(--ac)" stroke-width="2.5" points="${pt(P.rows)}"/><text x="30" y="12" font-size="11" fill="var(--ac)">With plan</text><text x="95" y="12" font-size="11" fill="var(--mu)">No conversion</text><text x="${W-10}" y="12" font-size="11" fill="var(--mu)" text-anchor="end">Peak ${fmt(mx)}</text><text x="30" y="${H-4}" font-size="11" fill="var(--mu)">Age ${P.rows[0].a}</text><text x="${W-10}" y="${H-4}" font-size="11" fill="var(--mu)" text-anchor="end">Age ${P.rows[P.rows.length-1].a}</text>`;
+ drawChart('ch',P.rows.map(r=>r.a),[{n:'With plan',c:'var(--ac)',v:P.rows.map(r=>r.bal),w:2.5},{n:'No conversion',c:'var(--mu)',v:N.rows.map(r=>r.bal),w:2}]);
+ const ages=[...new Set([v.ret,v.ssAge,v.pAge,+v.rmd,v.sLoss,v.death].filter(x=>x!==''&&x>=a0))].sort((a,b)=>a-b),lab={[v.ret]:'Retirement',[v.ssAge]:'Social Security',[v.pAge]:'Pension',[+v.rmd]:'RMDs begin',[v.sLoss]:'Spouse loss',[v.death]:'End of plan'};
+ $('ms').innerHTML='<tr><th>Milestone</th><th>Age</th><th>Status</th><th>Gross income</th><th>In today’s $</th><th>Tax</th><th>Effective rate</th><th>Marginal rate</th></tr>'+ages.map(a=>{const r=P.rows.find(x=>x.a==a);return r?`<tr><td>${lab[a]}</td><td>${a}</td><td>${r.fs}</td><td>${fmt(r.gross)}</td><td>${fmt(r.gross/r.f)}</td><td>${fmt(r.tax)}</td><td>${pc(r.eff)}</td><td>${pc(r.mr)}</td></tr>`:''}).join('');
+ $('yr').innerHTML='<tr><th>Age</th><th>Status</th><th>Wages</th><th>Soc. Sec.</th><th>Pension</th><th>Planned spend</th><th>Withdrawals</th><th>RMD</th><th>Converted</th><th>Conv. tax</th><th>Total tax</th><th>Pre-tax</th><th>Roth</th><th>Taxable/Cash</th><th>Total</th></tr>'+P.rows.map(r=>`<tr><td>${r.a}</td><td>${r.fs}</td><td>${fmt(r.wages)}</td><td>${fmt(r.ss)}</td><td>${fmt(r.pen)}</td><td>${fmt(r.spd)}</td><td>${fmt(r.wd)}</td><td>${fmt(r.rmd)}</td><td>${fmt(r.cv)}</td><td>${fmt(r.cvT)}</td><td>${fmt(r.tax)}</td><td>${fmt(r.trad)}</td><td>${fmt(r.roth)}</td><td>${fmt(r.tx)}</td><td>${fmt(r.bal)}</td></tr>`).join('')}
+['accts','chg','deps','events','spend'].forEach(draw);sl();run();
+</script></body></html>
