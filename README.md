@@ -232,4 +232,4 @@ Issues and pull requests are welcome. Ideas for future work:
 
 ## License
 
-Add your preferred license here (for example MIT) before publishing.
+GNU General Public License v3.0
