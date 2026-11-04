@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Retirement Tax & Roth Conversion Planner</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1d2330;--mu:#667085;--bd:#dde1e8;--ac:#1f6feb;--g:#1a7f4b;--r:#b42318;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12151c;--card:#1b202b;--tx:#e8ebf1;--mu:#98a2b3;--bd:#2d3444;--ac:#5b9bff;--g:#4cc38a;--r:#ff7b72;color-scheme:dark}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;padding:12px}
+h1{font-size:20px;margin:4px 0 2px}h2{font-size:15px;margin:0 0 8px}.sub{color:var(--mu);margin-bottom:12px}
+.grid{display:flex;flex-direction:column;gap:12px;max-width:1020px;margin:0 auto}h1,.sub{max-width:1020px;margin-left:auto;margin-right:auto}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;min-width:0}
+.card.w{grid-column:1/-1}
+label{display:block;font-size:12px;color:var(--mu);margin:6px 0 2px}
+input,select,textarea,button{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:5px 7px;width:100%}
+button{width:auto;cursor:pointer;background:var(--ac);color:#fff;border:0;padding:6px 12px}button.s{background:var(--bg);color:var(--tx);border:1px solid var(--bd)}
+.row{display:flex;gap:4px;margin-bottom:4px;align-items:center}.row>*{min-width:0}.row button{padding:5px 8px}
+.kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.kp div{background:var(--bg);border-radius:8px;padding:8px}.kp b{display:block;font-size:17px}.kp span{font-size:11px;color:var(--mu)}
+.sc{overflow-x:auto;max-height:380px}table{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}
+th,td{padding:4px 5px;text-align:right;border-bottom:1px solid var(--bd)}th{position:sticky;top:0;background:var(--card)}td:first-child,th:first-child{text-align:left}
+.n{color:var(--mu);font-size:12px}
+.dd details{border-bottom:1px solid var(--bd)}.dd summary,.dd .hd,.dd .tot,.dd .sub{display:grid;grid-template-columns:3fr 1.2fr 1.2fr 60px;gap:6px;padding:5px 4px;font-size:13px}
+.dd summary{cursor:pointer}.dd details details summary{padding-left:18px;font-size:12px}.dd .hd,.dd .sub{color:var(--mu);font-weight:600;font-size:12px}.dd .tot{font-weight:600;border-bottom:1px solid var(--bd)}
+.dd summary span:nth-child(n+2),.dd .hd span:nth-child(n+2),.dd .tot span:nth-child(n+2){text-align:right}.dd .tl{display:grid;grid-template-columns:90px 1fr 100px;gap:6px;padding:2px 4px 2px 34px;font-size:12px;color:var(--mu)}.dd .tl span:last-child{text-align:right}.g{color:var(--g)}.r{color:var(--r)}.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+</style></head><body>
+<h1>Retirement Tax &amp; Roth Conversion Planner</h1>
+<div class="sub">Estimates only, not tax advice. Uses 2025 federal brackets indexed by your inflation rate. Filing status MFJ = married filing jointly.</div>
+<div class="row" style="max-width:1020px;margin:0 auto 10px"><button id="b1" onclick="tab(1)">Planner</button><button id="b2" class="s" onclick="tab(2)">Cash Flow</button></div>
+<div id="t1"><div class="grid">
+<div class="card"><h2>Profile</h2><div id="gp"></div><div class="n" id="ageInfo"></div></div>
+<div class="card"><h2>Funding: savings &amp; investments</h2>
+<div class="n">Add rows for each account or a custom contribution. Balances can be imported from CSV: name,type(pretax/roth/taxable/hsa/cash),balance,return%,contribution,freq(1 or 12),balance as-of age. Bal. age = your age when the balance was recorded (blank = current age); older balances are grown to today at the return rate plus contributions.</div>
+<div id="accts"></div><div class="row"><button class="s" onclick="add('accts')">+ Add row</button><button class="s" onclick="addCash()">+ Add cash row</button><button class="s" onclick="$('csv').click()">Import CSV</button><input type="file" id="csv" accept=".csv,.txt" hidden></div>
+<datalist id="dl"><option>401(k)<option>403(b)<option>Traditional IRA<option>Roth IRA<option>Roth 401(k)<option>Brokerage<option>HSA<option>Custom contribution</datalist></div>
+<div class="card"><h2>Milestones</h2><div id="gm"></div><div class="n" id="ssInfo"></div></div>
+<div class="card"><h2>Filing status changes &amp; dependents</h2>
+<label>Status changes (age → status). Spouse loss age switches MFJ to S automatically.</label><div id="chg"></div><button class="s" onclick="add('chg')">+ Add change</button>
+<label>Dependents (current age, age they lose dependent status)</label><div id="deps"></div><button class="s" onclick="add('deps')">+ Add dependent</button></div>
+<div class="card w"><h2>Tax events schedule</h2><div class="n">Amount is taxable income (negative = deduction). One time uses the date; recurring uses frequency and start date; time period adds an end date.</div><div id="events"></div><button class="s" onclick="add('events')">+ Add event</button></div>
+<div class="card w"><h2>Planned spending</h2><div class="n">Large planned costs such as college, a car or a home project. Enter amounts in today’s dollars (inflated to the year they occur). One time uses the date; recurring uses frequency and start date; time period adds an end date. Funded from your accounts using the withdrawal order below, so withdrawals are taxed accordingly.</div><div id="spend"></div><button class="s" onclick="add('spend')">+ Add spending</button></div>
+<div class="card"><h2>Income strategy &amp; Roth conversion</h2><div id="gs"></div></div>
+<div class="card"><h2>Snapshots</h2><div class="row"><input id="sn" placeholder="Snapshot name"><button onclick="snapSave()">Save</button></div>
+<div class="row"><select id="sl"></select><button class="s" onclick="snapLoad()">Load</button><button class="s" onclick="snapDel()">Delete</button></div>
+<div class="row"><button class="s" onclick="$('js').value=JSON.stringify(snap())">Export JSON</button><button class="s" onclick="try{restore(JSON.parse($('js').value))}catch(e){alert('Invalid JSON')}">Import JSON</button></div>
+<textarea id="js" rows="3" placeholder="Paste or copy snapshot JSON here"></textarea><div class="n" id="snMsg"></div></div>
+<div class="card w"><h2>Results</h2><div class="kp" id="kp"></div><p id="assess"></p><h2 style="margin-top:14px">Total balance: with plan vs no conversion</h2><svg id="ch" viewBox="0 0 600 340" style="width:100%"></svg>
+<h2 style="margin-top:14px">Annual tax: with plan vs no conversion</h2><svg id="tx" viewBox="0 0 600 340" style="width:100%"></svg>
+<h2 style="margin-top:14px">Pre-tax and Roth balances</h2><svg id="pt" viewBox="0 0 600 340" style="width:100%"></svg>
+<h2 style="margin-top:14px">Monte Carlo analysis</h2><div class="row"><button onclick="mc()">Run Monte Carlo</button><span class="n">Returns vary randomly around each account’s return rate (cash stays fixed). Set trials and volatility under Income strategy.</span></div><div class="kp" id="mc"></div><svg id="mcch" viewBox="0 0 600 190" style="width:100%"></svg></div>
+<div class="card w"><h2>Income &amp; inferred tax rate at milestones</h2><div class="sc"><table id="ms"></table></div></div>
+<div class="card w"><h2>Year-by-year projection (nominal $, with Roth conversion plan)</h2><div class="sc"><table id="yr"></table></div></div>
+</div></div>
+<div id="t2" hidden><div class="grid">
+<div class="card"><h2>Import statements</h2>
+<div class="n">Drop bank, credit card or rental account statements (CSV, OFX, QFX). Files are read in your browser and are not uploaded. PDF statements are not supported: download CSV or OFX from your bank instead.</div>
+<label>Treat newly added files as</label><select id="ck"><option value="bank">Bank account (home spending)</option><option value="card">Credit card</option><option value="rental">Rental property (IRS Schedule E)</option></select>
+<div id="dz" style="border:2px dashed var(--bd);border-radius:10px;padding:22px;text-align:center;margin:8px 0;cursor:pointer">Drop files here or click to choose</div><input type="file" id="cfile" multiple accept=".csv,.ofx,.qfx,.txt" hidden>
+<div id="cfl"></div>
+<div class="two"><div><label>Flag items at or above $</label><input id="cth" type="number" value="5000" onchange="cf()"></div><div><label>&nbsp;</label><label style="margin:0"><input type="checkbox" id="cig" checked style="width:auto" onchange="cf()"> Ignore flagged exceptional items</label></div></div>
+<div class="row" style="margin-top:8px"><button class="s" onclick="cfSave()">Save to this browser</button><button class="s" onclick="cfLoad()">Load saved</button><button class="s" onclick="cfClear()">Clear all</button></div><div class="n" id="cfm"></div></div>
+<div class="card"><h2>Suggestions</h2><ul id="sg" style="margin:0;padding-left:18px"></ul></div>
+<div class="card w"><h2>Spending summary by category</h2><div class="two"><div><label>Show amounts per</label><select id="cfp" onchange="cf()"><option value="1">Month</option><option value="3">Quarter</option><option value="12">Year</option></select></div><div class="two"><div><label>From date</label><input id="cfr1" type="date" onchange="cf()"></div><div><label>To date</label><input id="cfr2" type="date" onchange="cf()"></div></div></div><div id="cfs" style="margin-top:6px"></div></div>
+<div class="card w"><h2>Cash flow projection</h2><div class="n" id="chz"></div>
+<div class="two"><div><label>Base</label><select id="cpm" onchange="cf()"><option value="pl">Planner (income, taxes, withdrawals from planner)</option><option value="st">Statements only (income and spending from statements)</option></select></div><div><label>Retirement spending as % of current</label><input id="crf" type="number" value="100" onchange="cf()"></div></div>
+<div class="two"><div><label>Living spending override, $/yr in today’s $ (blank = from statements)</label><input id="cs" type="number" onchange="cf()"></div><div><label>&nbsp;</label><label style="margin:0"><input type="checkbox" id="crn" checked style="width:auto" onchange="cf()"> Include net rental income</label></div></div>
+<div class="kp" id="ckp" style="margin:10px 0"></div>
+<svg id="cf" viewBox="0 0 600 340" style="width:100%"></svg>
+<div class="row" style="margin:8px 0"><button class="s" onclick="pushWant()">Use as desired income in planner</button><button class="s" onclick="pushOth()">Use net rental as other income in planner</button></div><div class="n" id="cpn"></div>
+<div class="sc"><table id="ctb"></table></div></div>
+<div class="card w"><h2>Transactions: review, recategorize, include or ignore</h2><div class="n">Click a column header to sort. Untick a row to ignore it (exceptional or one-time). Use Edit to change a date, description, amount (negative = outflow) or kind. Duplicates across overlapping statements are removed automatically.</div>
+<div class="row"><input id="ncn" placeholder="New category name" style="flex:2"><input id="nck" placeholder="Optional keywords, comma separated, to auto-match descriptions" style="flex:3"><button class="s" onclick="cfAddCat()">Add category</button></div><div id="ccl"></div>
+<div class="row"><button class="s" onclick="cfAddTx()">+ Add transaction</button></div>
+<label style="margin:0 0 6px"><input type="checkbox" id="cfa" checked style="width:auto"> Apply a category change to all transactions with the same description</label>
+<label>Show</label><select id="cff" onchange="txtab()"><option value="all">All</option><option value="ex">Flagged exceptional</option><option value="xf">Transfers and card payments</option><option value="un">Uncategorized</option><option value="ig">Ignored</option></select>
+<div class="sc" style="margin-top:8px"><table id="ctx"></table></div></div>
+</div></div>
+<script>
+const $=id=>document.getElementById(id),fmt=n=>(n<0?'-':'')+'$'+Math.round(Math.abs(n)).toLocaleString(),pc=n=>(n*100).toFixed(1)+'%';
+const SO='S:Single|MFJ:Married joint|MFS:Married separate|HOH:Head of household|QW:Qualifying widow(er)';
+const F=[
+['gp','dob','Date of birth','date','1966-01-01'],['gp','gender','Gender','sel','M','M:Male|F:Female'],['gp','emp','Employment start date (if it affects pension)','date',''],
+['gp','inc','Current income $','number',150000],['gp','gr','Expected income growth %','number',3],['gp','oth','Other ongoing income $/yr','number',0],
+['gp','othEnd','Other income ends at age (blank = retirement)','number',''],['gp','fed','Current federal tax rate % (used in working years)','number',22],['gp','st','State tax rate % (optional)','number',0],['gp','inf','Inflation %','number',2],
+['gm','ret','Retirement age','number',65],['gm','ssAge','Claim Social Security at age','number',67],['gm','pia','Est. monthly Social Security at 67 $','number',3000],
+['gm','pMode','Pension calculation','sel','man','man:Manual amount|fers:FERS (OPM formula)'],['gm','pAge','Pension start age (blank = retirement age for FERS)','number',''],['gm','pAmt','Manual pension $/yr','number',0],['gm','high3','FERS high-3 average salary $ (blank = estimate from income)','number',''],['gm','rmd','RMD age','sel','75','73:73|75:75'],
+['gm','death','Expected age of death','number',85],['gm','fs','Initial filing status','sel','MFJ',SO],
+['gm','sAge','Spouse current age (if married)','number',''],['gm','sPia','Spouse monthly Social Security at 67 $','number',0],['gm','sSs','Spouse claim age','number',67],['gm','sLoss','Age you lose spouse (blank = never)','number',''],
+['gs','want','Desired yearly income, today $ (blank = withdrawal % of balance at retirement)','number',''],['gs','rate','Withdrawal rate %','number',3.9],['gs','mcN','Monte Carlo trials','number',500],['gs','mcVol','Investment volatility % (std dev of annual return)','number',12],
+['gs','strat','Withdrawal order','sel','opt','prop:Evenly pulled from all accounts|order:Taxable, then pre-tax, then Roth|opt:Optimized (fill low brackets with pre-tax first)'],
+['gs','cv','Roth conversion','sel','fill','none:None|fixed:Fixed $/yr (today $)|fill:Fill up to bracket'],['gs','cvAmt','Fixed conversion $/yr','number',50000],
+['gs','cvBr','Fill to top of bracket %','sel','22','12:12%|22:22%|24:24%|32:32%'],['gs','cvS','Conversion start age','number',65],['gs','cvE','Conversion end age','number',74],
+['gs','cvPay','Pay conversion tax from','sel','ext','ext:External sources (taxable account)|conv:Converted funds']];
+const COLS={accts:[['n','Account','text',3,0,'dl'],['t','Type','sel',2,'trad:Pre-tax|roth:Roth|tax:Taxable|hsa:HSA|cash:Cash'],['b','Balance $','number',2],['r','Return %','number',1],['c','Contrib $','number',2],['f','Freq','sel',2,'1:Yearly|12:Monthly'],['ba','Bal. age','number',1]],
+chg:[['age','At age','number',1],['fs','Status','sel',2,SO]],deps:[['n','Name','text',2],['age','Age now','number',1],['loss','Loses status at','number',1]],
+events:[['d','Description','text',3],['amt','Amount $','number',2],['ty','Type','sel',2,'once:One time|rec:Recurring|per:Time period'],['fr','Freq','sel',2,'1:Yearly|4:Quarterly|12:Monthly'],['s','Date / start','date',2],['e','End','date',2]]};
+COLS.spend=COLS.events;
+let ST={accts:[{n:'401(k)',t:'trad',b:500000,r:6,c:20000,f:1},{n:'Roth IRA',t:'roth',b:100000,r:6,c:0,f:1},{n:'Brokerage',t:'tax',b:150000,r:5,c:0,f:1},{n:'Cash',t:'cash',b:25000,r:3,c:0,f:1}],chg:[],deps:[],events:[],spend:[]};
+const mk=(f)=>{const[,k,l,t,d,o]=f;return`<label>${l}</label>`+(t=='sel'?`<select id="f_${k}">${o.split('|').map(x=>{const[v,n]=x.split(':');return`<option value="${v}"${v==d?' selected':''}>${n??v}</option>`}).join('')}</select>`:`<input id="f_${k}" type="${t}" value="${d}">`)};
+['gp','gm','gs'].forEach(g=>$(g).innerHTML=F.filter(f=>f[0]==g).map(mk).join(''));
+function draw(a){$(a).innerHTML=ST[a].map((r,i)=>`<div class="row">${COLS[a].map(([k,l,t,w,o,li])=>{const v=r[k]??'';const st=`style="flex:${w}"`;return t=='sel'?`<select ${st} data-a="${a}" data-i="${i}" data-k="${k}">${o.split('|').map(x=>{const[q,n]=x.split(':');return`<option value="${q}"${q==v?' selected':''}>${n}</option>`}).join('')}</select>`:`<input ${st} type="${t}" title="${l}" placeholder="${l}" value="${v}" data-a="${a}" data-i="${i}" data-k="${k}"${li?` list="${li}"`:''}>`}).join('')}<button class="s" onclick="del('${a}',${i})">×</button></div>`).join('')}
+function add(a){const d={accts:{n:'Custom',t:'trad',b:0,r:6,c:0,f:1,ba:''},chg:{age:75,fs:'S'},deps:{n:'Child',age:5,loss:18},events:{d:'',amt:0,ty:'once',fr:1,s:'',e:''},spend:{d:'',amt:0,ty:'once',fr:1,s:'',e:''}};ST[a].push(d[a]);draw(a);run()}
+function addCash(){ST.accts.push({n:'Cash',t:'cash',b:0,r:3,c:0,f:1,ba:''});draw('accts');run()}
+function del(a,i){ST[a].splice(i,1);draw(a);run()}
+document.addEventListener('input',e=>{const t=e.target;if(t.dataset.a){ST[t.dataset.a][t.dataset.i][t.dataset.k]=t.type=='number'?(t.value===''?'':+t.value):t.value}run()});
+$('f_gender').addEventListener('change',e=>{const d=$('f_death');if(d.value==85||d.value==88)d.value=e.target.value=='F'?88:85;run()});
+$('csv').onchange=e=>{const fr=new FileReader();fr.onload=()=>{const m={pretax:'trad',trad:'trad',roth:'roth',taxable:'tax',tax:'tax',hsa:'hsa',cash:'cash'};const rows=fr.result.split(/\r?\n/).map(l=>l.split(',').map(s=>s.trim())).filter(r=>r.length>=3&&!isNaN(+r[2]));if(rows.length)ST.accts=rows.map(r=>({n:r[0],t:m[(r[1]||'').toLowerCase()]||'tax',b:+r[2],r:+r[3]||6,c:+r[4]||0,f:+r[5]==12?12:1,ba:r[6]?+r[6]:''}));draw('accts');run()};fr.readAsText(e.target.files[0])};
+function read(){const v={};F.forEach(f=>{const e=$('f_'+f[1]);v[f[1]]=e.type=='number'?(e.value===''?'':+e.value):e.value});return v}
+function snap(){return{v:read(),ST}}
+function restore(s){F.forEach(f=>{if(s.v[f[1]]!==undefined)$('f_'+f[1]).value=s.v[f[1]]});ST=s.ST;ST.spend=ST.spend||[];['accts','chg','deps','events','spend'].forEach(draw);run()}
+const SK='rtp_snaps';const gs=()=>{try{return JSON.parse(localStorage.getItem(SK)||'{}')}catch(e){return{}}};
+function sl(){const s=gs();$('sl').innerHTML=Object.keys(s).map(k=>`<option>${k}</option>`).join('')||'<option value="">(none saved)</option>'}
+function snapSave(){const n=$('sn').value.trim()||new Date().toLocaleString();const s=gs();s[n]=snap();try{localStorage.setItem(SK,JSON.stringify(s));$('snMsg').textContent='Saved "'+n+'" in this browser.'}catch(e){$('snMsg').textContent='Browser storage unavailable. Use Export JSON and keep the text.'}sl();$('sl').value=n}
+function snapLoad(){const s=gs()[$('sl').value];if(s)restore(s)}
+function snapDel(){const s=gs();delete s[$('sl').value];try{localStorage.setItem(SK,JSON.stringify(s))}catch(e){}sl()}
+// ---- tax engine
+const R=[.1,.12,.22,.24,.32,.35,.37],MJ=[23850,96950,206700,394600,501050,751600];
+const TH={S:[11925,48475,103350,197300,250525,626350],MFJ:MJ,QW:MJ,HOH:[17000,64850,103350,197300,250500,626350],MFS:[11925,48475,103350,197300,250525,375800]};
+const SD={S:15750,MFJ:31500,QW:31500,MFS:15750,HOH:23625};
+const DV=[26.5,25.5,24.6,23.7,22.9,22,21.1,20.2,19.4,18.5,17.7,16.8,16,15.2,14.4,13.7,12.9,12.2,11.5,10.8,10.1,9.5,8.9,8.4,7.8,7.3,6.8,6.4];
+function br(ti,fs,f){const T=TH[fs];let p=0,tx=0,r=R[0];for(let i=0;i<7;i++){const hi=i<6?T[i]*f:1e15;if(ti>p){tx+=(Math.min(ti,hi)-p)*R[i];r=R[i]}p=hi}return[tx,r]}
+function ssTax(ss,oi,fs){if(!ss)return 0;const b=fs=='MFJ'||fs=='QW'?[32e3,44e3]:fs=='MFS'?[0,0]:[25e3,34e3],pi=oi+ss/2;if(pi<=b[0])return 0;const t=pi<=b[1]?.5*(pi-b[0]):.85*(pi-b[1])+Math.min(.5*ss,.5*(b[1]-b[0]));return Math.min(t,.85*ss)}
+function yt(ord,ss,fs,f,cr){const ts=ssTax(ss,ord,fs),ti=Math.max(0,ord+ts-SD[fs]*f),[x,r]=br(ti,fs,f);return{fed:Math.max(0,x-cr),ti,r}}
+const claim=(p,a)=>{if(a<67){const m=(67-a)*12;return p*(1-(m<=36?m*5/900:36*5/900+(m-36)*5/1200))}return p*(1+.08*(Math.min(a,70)-67))};
+const age0=v=>v.dob?Math.floor((Date.now()-new Date(v.dob))/31557600000):60;
+function fers(v){if(!v.emp)return null;const af=v.dob?(Date.now()-new Date(v.dob))/31557600000:60,sv=Math.max(0,v.ret-af+(Date.now()-new Date(v.emp))/31557600000),n=v.ret-Math.floor(af),h3=v.high3!==''?+v.high3:[1,2,3].reduce((s,k)=>s+v.inc*Math.pow(1+v.gr/100,Math.max(0,n-k)),0)/3,m=v.ret>=62&&sv>=20?.011:.01,i=v.inf/100,cola=i<=.02?i:i<=.03?.02:i-.01;return{amt:m*h3*sv,sv,h3,m,cola,start:v.pAge!==''?+v.pAge:v.ret}}
+function sim(v,conv,Z){
+ const a0=age0(v),inf=v.inf/100,Y=new Date().getFullYear(),A=ST.accts.map(x=>{const r=(+x.r||0)/100,c=(+x.c||0)*(+x.f==12?12:1),n=x.ba!==''&&x.ba!==undefined?Math.max(0,a0-x.ba):0;let b=+x.b||0;if(n)b=b*Math.pow(1+r,n)+(r?c*(Math.pow(1+r,n)-1)/r:c*n);return{t:x.t=='hsa'?'roth':x.t,b,r,c}});
+ const bal=ty=>A.filter(x=>x.t==ty).reduce((s,x)=>s+x.b,0),all=()=>bal('trad')+bal('roth')+bal('tax')+bal('cash');
+ const take=(ty,amt)=>{const B=bal(ty);if(B<=0||amt<=0)return 0;const g=Math.min(amt,B);A.forEach(x=>{if(x.t==ty)x.b-=g*x.b/B});return g};
+ const put=(ty,amt)=>{let x=A.find(y=>y.t==ty);if(!x){x={t:ty,b:0,r:.03,c:0};A.push(x)}x.b+=amt};
+ const chg=ST.chg.filter(c=>c.age!=='').map(c=>({age:+c.age,fs:c.fs}));if(v.sLoss!=='')chg.push({age:+v.sLoss,fs:'S'});chg.sort((a,b)=>a.age-b.age);
+ const rows=[];let base=null,life=0,convTax=0,short=0,firstConv=null;
+ for(let t=0,a=a0;a<=v.death;t++,a++){
+  const f=Math.pow(1+inf,t);let fs=v.fs;chg.forEach(c=>{if(a>=c.age)fs=c.fs});
+  const work=a<v.ret;if(work)A.forEach(x=>x.b+=x.c);
+  const wages=work?v.inc*Math.pow(1+v.gr/100,t):0,oth=a<(v.othEnd===''?v.ret:v.othEnd)?+v.oth||0:0;
+  const FR=v.pMode=='fers'?fers(v):null,pen=v.pMode=='fers'?(FR&&a>=FR.start?FR.amt*Math.pow(1+FR.cola,Math.max(0,a-Math.max(62,FR.start))):0):(v.pAge!==''&&a>=v.pAge?+v.pAmt||0:0);
+  const own=a>=v.ssAge?claim(v.pia,v.ssAge)*12*f:0,sp=v.sAge!==''&&(v.sAge+t>=v.sSs)?claim(v.sPia,v.sSs)*12*f:0;
+  const lost=v.sLoss!==''&&a>=v.sLoss,ss=lost?Math.max(own,sp):own+(v.sAge!==''?sp:0);
+  let ev=0;ST.events.forEach(e=>{const m=+e.fr||1,am=+e.amt||0,sy=e.s?+e.s.slice(0,4):null,ey=e.e?+e.e.slice(0,4):null,y=Y+t;if(sy===null)return;if(e.ty=='once'&&y==sy)ev+=am;else if(e.ty=='rec'&&y>=sy)ev+=am*m;else if(e.ty=='per'&&y>=sy&&(ey===null||y<=ey))ev+=am*m});
+  let spd=0;ST.spend.forEach(e=>{const m=+e.fr||1,am=(+e.amt||0)*f,sy=e.s?+e.s.slice(0,4):null,ey=e.e?+e.e.slice(0,4):null,y=Y+t;if(sy===null)return;if(e.ty=='once'&&y==sy)spd+=am;else if(e.ty=='rec'&&y>=sy)spd+=am*m;else if(e.ty=='per'&&y>=sy&&(ey===null||y<=ey))spd+=am*m});
+  const cr=ST.deps.filter(d=>d.age!==''&&d.loss!==''&&+d.age+t<+d.loss).reduce((s,d)=>s+(+d.age+t<17?2200:500),0);
+  if(!work&&base===null)base=all()*v.rate/100;
+  const target=work?0:(v.want!==''?v.want*f:base*Math.pow(1+inf,a-v.ret));
+  const ci=A.filter(x=>x.t=='cash').reduce((s,x)=>s+x.b*x.r,0),pre=work?A.filter(x=>x.t=='trad').reduce((s,x)=>s+x.c,0):0,ordPre=wages+oth+pen+ev-pre,need=(work?0:Math.max(0,target-ss-ordPre))+spd;
+  const tradStart=bal('trad'),w={cash:0,tax:0,trad:0,roth:0};let rem=need;
+  const pull=(ty,lim)=>{const g=take(ty,Math.min(rem,lim));w[ty]+=g;rem-=g};
+  if(need>0){if(v.strat=='prop'){const tot=all(),sh={cash:bal('cash'),tax:bal('tax'),trad:bal('trad'),roth:bal('roth')};for(const ty in sh)w[ty]+=take(ty,Math.min(need,tot)*sh[ty]/(tot||1))}
+   else if(v.strat=='order'){pull('cash',1e15);pull('tax',1e15);pull('trad',1e15);pull('roth',1e15)}
+   else{const room=TH[fs][2]*f+SD[fs]*f-ordPre-.5*ss;pull('trad',Math.max(0,room));pull('cash',1e15);pull('tax',1e15);pull('roth',1e15);pull('trad',1e15)}}
+  let rmd=0;if(a>=v.rmd&&tradStart>0){rmd=tradStart/(DV[a-73]||6);if(w.trad<rmd){const ex=take('trad',rmd-w.trad);w.trad+=ex;put('tax',ex)}}
+  const ord=ordPre+ci+w.trad,stR=v.st/100;
+  const base0=yt(ord,ss,fs,f,cr);let fedB=work?Math.max(0,v.fed/100*ord-cr):base0.fed;
+  let cvAmt=0,cvT=0;
+  if(conv&&v.cv!='none'&&a>=v.cvS&&a<=v.cvE&&bal('trad')>0){
+   if(v.cv=='fixed')cvAmt=v.cvAmt*f;else{const i=R.findIndex(x=>Math.abs(x-v.cvBr/100)<1e-9);cvAmt=Math.max(0,TH[fs][i]*f-base0.ti)}
+   cvAmt=Math.min(cvAmt,bal('trad'));
+   if(cvAmt>0){cvT=yt(ord+cvAmt,ss,fs,f,cr).fed-base0.fed+stR*cvAmt;take('trad',cvAmt);firstConv??=cvT;
+    if(v.cvPay=='conv'){put('roth',cvAmt-cvT)}else{put('roth',cvAmt);let g=take('cash',cvT);g+=take('tax',cvT-g);if(g<cvT){const g2=take('roth',cvT-g);if(g+g2<cvT)short++;else short+=0;if(g<cvT)short+=1}}
+    convTax+=cvT}}
+  const tax=fedB+stR*(ord)+.075*w.tax+cvT;life+=tax;
+  const gross=wages+ss+pen+oth+ev+w.cash+w.tax+w.trad+w.roth;
+  const tiF=yt(ord+cvAmt,ss,fs,f,cr);
+  A.forEach(x=>x.b*=Math.max(.05,1+x.r+(Z&&x.t!='cash'?v.mcVol/100*Z[t]:0)));
+  rows.push({a,fs,f,wages,ss,spd,cr,pen,oth,ev,ctb:work?A.reduce((s,x)=>s+x.c,0):0,wd:w.cash+w.tax+w.trad+w.roth,rmd,cv:cvAmt,cvT,tax,gross,eff:gross>0?tax/gross:0,mr:work?v.fed/100:tiF.r+(stR),bal:all(),trad:bal('trad'),roth:bal('roth'),tx:bal('tax')+bal('cash')});
+ }
+ const L=rows[rows.length-1]||{trad:0,roth:0,tx:0,bal:0};
+ return{rows,life,convTax,short,est:L.trad*.76+L.roth+L.tx,end:L.bal,firstConv,a0}}
+function mc(){$('mc').innerHTML='<div><span>Running simulation…</span></div>';setTimeout(mcRun,30)}
+function mcRun(){const v=read(),a0=age0(v);if(!(v.death>a0)){$('mc').innerHTML='';return}
+ const N=Math.max(50,Math.min(3000,+v.mcN||500)),L=v.death-a0+1;let s=42;
+ const rnd=()=>{s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296},nrm=()=>Math.sqrt(-2*Math.log(rnd()||1e-9))*Math.cos(2*Math.PI*rnd());
+ const pb=[],est=[[],[]],ok=[0,0];
+ for(let i=0;i<N;i++){const Z=Array.from({length:L+1},nrm);[true,false].forEach((c,j)=>{const r=sim(v,c,Z);if(!r.rows.some(x=>x.a>=v.ret&&x.bal<1))ok[j]++;if(j==0)pb.push(r.rows.map(x=>x.bal));est[j].push(r.est)})}
+ const q=(a,p)=>{const x=[...a].sort((m,n)=>m-n);return x[Math.floor(p*(x.length-1))]};
+ const D=sim(v,true),cols=D.rows.map((_,i)=>pb.map(r=>r[i])),p10=cols.map(c=>q(c,.1)),p50=cols.map(c=>q(c,.5)),p90=cols.map(c=>q(c,.9));
+ $('mc').innerHTML=[['Success rate, with plan',pc(ok[0]/N)],['Success rate, no conversion',pc(ok[1]/N)],['Median after-tax estate (plan)',fmt(q(est[0],.5))],['Median estate (no conversion)',fmt(q(est[1],.5))],['Poor case, 10th pct (plan)',fmt(q(est[0],.1))],['Strong case, 90th pct (plan)',fmt(q(est[0],.9))]].map(x=>`<div><span>${x[0]}</span><b>${x[1]}</b></div>`).join('')+`<p class="n" style="grid-column:1/-1;margin:0">${N} trials. Success = savings are not depleted at any point from retirement to age ${v.death}. Same random returns are used for both strategies.</p>`;
+ const W=600,H=190,n=p50.length-1||1,mx=Math.max(...p90,1),X=i=>30+i*(W-40)/n,Y=b=>H-20-b/mx*(H-40),ln=a=>a.map((b,i)=>X(i)+','+Y(b)).join(' ');
+ const _mc=`<polygon fill="var(--ac)" opacity=".15" points="${ln(p90)} ${ln(p10.slice().reverse().map((b,i)=>b)).split(' ').map((_,i,arr)=>X(n-i)+','+Y(p10[n-i])).join(' ')}"/><polyline fill="none" stroke="var(--ac)" stroke-width="2.5" points="${ln(p50)}"/><polyline fill="none" stroke="var(--mu)" stroke-width="1.5" stroke-dasharray="4 3" points="${ln(D.rows.map(r=>r.bal))}"/><text x="30" y="12" font-size="11" fill="var(--ac)">Median (shaded: 10th–90th pct)</text><text x="250" y="12" font-size="11" fill="var(--mu)">Dashed: fixed-return projection</text><text x="${W-10}" y="12" font-size="11" fill="var(--mu)" text-anchor="end">Max ${fmt(mx)}</text><text x="30" y="${H-4}" font-size="11" fill="var(--mu)">Age ${a0}</text><text x="${W-10}" y="${H-4}" font-size="11" fill="var(--mu)" text-anchor="end">Age ${v.death}</text>`;
+ drawChart('mcch',D.rows.map(r=>r.a),[{n:'Median',c:'var(--ac)',v:p50,w:2.5},{n:'Fixed-return projection',c:'var(--mu)',v:D.rows.map(r=>r.bal),w:1.5,d:1}],{lo:p10,hi:p90},marks(v,a0))}
+function marks(v,a0){const Y=new Date().getFullYear(),o=[];[['events','t','#e8912d','Tax event'],['spend','s','#a855f7','Spending']].forEach(([a,k,c,nm])=>ST[a].forEach(e=>{if(!e.s)return;const age=a0+(+e.s.slice(0,4)-Y);if(age<a0||age>v.death)return;const fr={1:'yearly',4:'quarterly',12:'monthly'}[e.fr]||'';o.push({age,c,k,t:[nm+': '+(e.d||'(no description)'),'Amount: '+fmt(+e.amt||0)+(e.ty=='once'?'':' '+fr)+(a=='spend'?' (today’s $)':''),'Starts: '+e.s+(e.ty=='per'&&e.e?' · ends '+e.e:'')+' (age '+age+')']})}));return{ret:v.ret,ev:o}}
+function drawChart(id,lab,S,B,M){
+ const el=$(id),W=600,H=340,L=58,Rg=10,T=34,Bt=24,hi=B?B.hi:[],mx0=Math.max(...S.flatMap(s=>s.v),...hi,1),raw=mx0/6,p=Math.pow(10,Math.floor(Math.log10(raw))),st=[1,2,2.5,5,10].map(m=>m*p).find(s=>s>=raw),K=Math.ceil(mx0/st-1e-9),mx=K*st,n=lab.length-1||1,
+ X=i=>L+i*(W-L-Rg)/n,Y=b=>H-Bt-b/mx*(H-Bt-T),sh=v=>v>=1e6?'$'+(+(v/1e6).toFixed(2))+'M':v>=1e3?'$'+(+(v/1e3).toFixed(1))+'K':'$'+Math.round(v),pl=a=>a.map((b,i)=>X(i)+','+Y(b)).join(' ');
+ let g='';for(let k=0;k<=K;k++){const y=k*st;g+=`<line x1="${L}" x2="${W-Rg}" y1="${Y(y)}" y2="${Y(y)}" stroke="var(--bd)"/><text x="${L-6}" y="${Y(y)+3}" font-size="10" fill="var(--mu)" text-anchor="end">${sh(y)}</text>`}
+ const ts=Math.max(1,Math.ceil(n/8));for(let i=0;i<=n;i+=ts)g+=`<text x="${X(i)}" y="${H-8}" font-size="10" fill="var(--mu)" text-anchor="middle">${lab[i]}</text>`;
+ g+=`<line x1="${L}" x2="${L}" y1="${T}" y2="${H-Bt}" stroke="var(--mu)"/>`;
+ if(B)g+=`<polygon fill="var(--ac)" opacity=".15" points="${pl(B.hi)} ${B.lo.map((b,i)=>X(n-i)+','+Y(B.lo[n-i])).join(' ')}"/>`;
+ S.forEach((s,k)=>{g+=`<polyline fill="none" stroke="${s.c}" stroke-width="${s.w||2}"${s.d?' stroke-dasharray="4 3"':''} points="${pl(s.v)}"/><text x="${L+k*150}" y="13" font-size="11" fill="${s.c}">${s.n}</text>`});
+ const EV=(M&&M.ev)||[];
+ if(M&&M.ret!=null){const ri=lab.indexOf(M.ret);if(ri>=0)g+=`<line x1="${X(ri)}" x2="${X(ri)}" y1="${T}" y2="${H-Bt}" stroke="var(--g)" stroke-width="1.5" stroke-dasharray="6 3"/><text x="${X(ri)+4}" y="${T+11}" font-size="10" fill="var(--g)">Retire ${M.ret}</text>`}
+ const cnt={};EV.forEach((e,j)=>{const i=lab.indexOf(e.age);if(i<0)return;const k=cnt[i]=(cnt[i]||0)+1,x=X(i)+(k-1)*9,y=H-Bt;g+=`<polygon data-ev="${j}" points="${x-5},${y} ${x+5},${y} ${x},${y-10}" fill="${e.c}" stroke="var(--card)" stroke-width="1" style="cursor:pointer"/>`});
+ if(EV.some(e=>e.k=='t'))g+=`<text x="${W-Rg-82}" y="26" font-size="11" fill="#e8912d" text-anchor="end">▲ Tax event</text>`;
+ if(EV.some(e=>e.k=='s'))g+=`<text x="${W-Rg}" y="26" font-size="11" fill="#a855f7" text-anchor="end">▲ Spending</text>`;
+ g+=`<line id="${id}_l" y1="${T}" y2="${H-Bt}" stroke="var(--tx)" stroke-dasharray="3 3" visibility="hidden"/><g id="${id}_t" visibility="hidden"><rect rx="5" fill="var(--card)" stroke="var(--bd)"/></g>`;
+ el.setAttribute('viewBox',`0 0 ${W} ${H}`);el.style.touchAction='pan-y';el.innerHTML=g;
+ const ln=$(id+'_l'),tg=$(id+'_t'),rc=tg.firstChild;
+ el.onpointermove=e=>{const r=el.getBoundingClientRect(),xr=(e.clientX-r.left)/r.width*W,mj=e.target.dataset?e.target.dataset.ev:undefined,E=mj!==undefined?EV[mj]:null,i=E?lab.indexOf(E.age):Math.max(0,Math.min(n,Math.round((xr-L)/(W-L-Rg)*n))),rows=E?E.t:['Age '+lab[i],...S.map(s=>s.n+': '+fmt(s.v[i])),...(B?['10th–90th pct: '+sh(B.lo[i])+' – '+sh(B.hi[i])]:[])];
+  ln.setAttribute('x1',X(i));ln.setAttribute('x2',X(i));ln.setAttribute('visibility','visible');
+  tg.querySelectorAll('text').forEach(t=>t.remove());const w=Math.max(...rows.map(t=>t.length))*5.8+14,h=rows.length*14+8,tx=X(i)>W/2?X(i)-w-8:X(i)+8;
+  rc.setAttribute('x',tx);rc.setAttribute('y',T);rc.setAttribute('width',w);rc.setAttribute('height',h);
+  rows.forEach((t,k)=>{const x=document.createElementNS('http://www.w3.org/2000/svg','text');x.setAttribute('x',tx+7);x.setAttribute('y',T+16+k*14);x.setAttribute('font-size','11');x.setAttribute('fill',!E&&k&&k<=S.length?S[k-1].c:'var(--tx)');x.textContent=t;tg.appendChild(x)});tg.setAttribute('visibility','visible')};
+ el.onpointerleave=()=>{ln.setAttribute('visibility','hidden');tg.setAttribute('visibility','hidden')}}
+function run(){
+ const v=read(),a0=age0(v);$('ageInfo').textContent='Current age: '+a0+(v.emp?' · Years of service at retirement: '+Math.max(0,v.ret-a0+ (new Date().getFullYear()-new Date(v.emp).getFullYear())):'');
+ $('ssInfo').textContent='Expected Social Security at claim age '+v.ssAge+': '+fmt(claim(v.pia,v.ssAge)*12)+'/yr'+(v.sAge!==''?' · Spouse: '+fmt(claim(v.sPia,v.sSs)*12)+'/yr':'')+' (today’s dollars; 8%/yr delayed credit to 70, reductions before 67)'+(v.pMode=='fers'?(()=>{const F=fers(v);return F?' · FERS pension: '+fmt(F.amt)+'/yr at retirement ('+(F.m*100).toFixed(1)+'% × high-3 '+fmt(F.h3)+' × '+F.sv.toFixed(1)+' yrs of service; COLA '+(F.cola*100).toFixed(1)+'% from age 62)':' · Enter your employment start date to calculate the FERS pension'})():'');
+ if(!(v.death>a0)){return}
+ const P=sim(v,true),N=sim(v,false),dT=P.life-N.life,dE=P.est-N.est;
+ $('kp').innerHTML=[['Lifetime tax (no conversion)',fmt(N.life)],['Lifetime tax (with plan)',fmt(P.life)],['Tax on conversions',fmt(P.convTax)],['After-tax estate (no conversion)',fmt(N.est)],['After-tax estate (with plan)',fmt(P.est)],['Estate difference',`<span class="${dE>=0?'g':'r'}">${fmt(dE)}</span>`]].map(x=>`<div><span>${x[0]}</span><b>${x[1]}</b></div>`).join('');
+ let msg='';
+ if(v.cv=='none')msg='Roth conversion is turned off. Choose Fixed or Fill bracket to evaluate it.';
+ else if(P.convTax==0)msg='No conversion occurred: check that your conversion ages fall in retirement years and that you hold pre-tax balances.';
+ else{msg=`Converting changes lifetime taxes by <b class="${dT<=0?'g':'r'}">${fmt(dT)}</b> and the after-tax estate (pre-tax balances valued at a 24% heir rate) by <b class="${dE>=0?'g':'r'}">${fmt(dE)}</b>. `+(dE>0?'Conversion looks beneficial under these assumptions. ':'Conversion does not improve the outcome under these assumptions. ')+(v.cvPay=='ext'?(P.short?'Warning: the taxable account could not fully cover conversion tax in some years, so Roth funds were used.':'Conversion tax is affordable from the taxable account.'):'Tax is withheld from converted funds, so less reaches the Roth.')}
+ $('assess').innerHTML=msg;
+ const W=600,H=190,mx=Math.max(...P.rows.map(r=>r.bal),...N.rows.map(r=>r.bal),1),n=P.rows.length-1||1,pt=R=>R.map((r,i)=>`${30+i*(W-40)/n},${H-20-(r.bal/mx)*(H-40)}`).join(' ');
+ const _ch=`<polyline fill="none" stroke="var(--mu)" stroke-width="2" points="${pt(N.rows)}"/><polyline fill="none" stroke="var(--ac)" stroke-width="2.5" points="${pt(P.rows)}"/><text x="30" y="12" font-size="11" fill="var(--ac)">With plan</text><text x="95" y="12" font-size="11" fill="var(--mu)">No conversion</text><text x="${W-10}" y="12" font-size="11" fill="var(--mu)" text-anchor="end">Peak ${fmt(mx)}</text><text x="30" y="${H-4}" font-size="11" fill="var(--mu)">Age ${P.rows[0].a}</text><text x="${W-10}" y="${H-4}" font-size="11" fill="var(--mu)" text-anchor="end">Age ${P.rows[P.rows.length-1].a}</text>`;
+ const M=marks(v,a0);drawChart('ch',P.rows.map(r=>r.a),[{n:'With plan',c:'var(--ac)',v:P.rows.map(r=>r.bal),w:2.5},{n:'No conversion',c:'var(--mu)',v:N.rows.map(r=>r.bal),w:2}],null,M);
+ drawChart('tx',P.rows.map(r=>r.a),[{n:'Tax, with plan',c:'var(--ac)',v:P.rows.map(r=>r.tax),w:2.5},{n:'Tax, no conversion',c:'var(--mu)',v:N.rows.map(r=>r.tax),w:2}],null,M);
+ drawChart('pt',P.rows.map(r=>r.a),[{n:'Pre-tax (plan)',c:'var(--ac)',v:P.rows.map(r=>r.trad),w:2.5},{n:'Pre-tax (none)',c:'var(--mu)',v:N.rows.map(r=>r.trad),w:2},{n:'Roth (plan)',c:'var(--g)',v:P.rows.map(r=>r.roth),w:2.5},{n:'Roth (none)',c:'#e8912d',v:N.rows.map(r=>r.roth),w:2}],null,M);
+ const ages=[...new Set([v.ret,v.ssAge,v.pAge,+v.rmd,v.sLoss,v.death].filter(x=>x!==''&&x>=a0))].sort((a,b)=>a-b),lab={[v.ret]:'Retirement',[v.ssAge]:'Social Security',[v.pAge]:'Pension',[+v.rmd]:'RMDs begin',[v.sLoss]:'Spouse loss',[v.death]:'End of plan'};
+ $('ms').innerHTML='<tr><th>Milestone</th><th>Age</th><th>Status</th><th>Gross income</th><th>In today’s $</th><th>Tax</th><th>Effective rate</th><th>Marginal rate</th></tr>'+ages.map(a=>{const r=P.rows.find(x=>x.a==a);return r?`<tr><td>${lab[a]}</td><td>${a}</td><td>${r.fs}</td><td>${fmt(r.gross)}</td><td>${fmt(r.gross/r.f)}</td><td>${fmt(r.tax)}</td><td>${pc(r.eff)}</td><td>${pc(r.mr)}</td></tr>`:''}).join('');
+ $('yr').innerHTML='<tr><th>Age</th><th>Status</th><th>Wages</th><th>Soc. Sec.</th><th>Pension</th><th>Planned spend</th><th>Withdrawals</th><th>RMD</th><th>Converted</th><th>Conv. tax</th><th>Dep. credit</th><th>Total tax</th><th>Pre-tax</th><th>Roth</th><th>Taxable/Cash</th><th>Total</th></tr>'+P.rows.map(r=>`<tr><td>${r.a}</td><td>${r.fs}</td><td>${fmt(r.wages)}</td><td>${fmt(r.ss)}</td><td>${fmt(r.pen)}</td><td>${fmt(r.spd)}</td><td>${fmt(r.wd)}</td><td>${fmt(r.rmd)}</td><td>${fmt(r.cv)}</td><td>${fmt(r.cvT)}</td><td>${fmt(r.cr)}</td><td>${fmt(r.tax)}</td><td>${fmt(r.trad)}</td><td>${fmt(r.roth)}</td><td>${fmt(r.tx)}</td><td>${fmt(r.bal)}</td></tr>`).join('')}
+// ---- Cash flow tab
+function tab(n){$('t1').hidden=n!=1;$('t2').hidden=n!=2;$('b1').className=n==1?'':'s';$('b2').className=n==2?'':'s';if(n==2)cf()}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const CF={files:[],ov:{},ovm:{},tx:[],dups:0,N:null,op:new Set(),ed:{},man:[],custom:[],edit:null,mn:0,sort:{k:'d',d:-1}};
+const HOME=[['Investment (kids)','529|utma|ugma|custodial|college savings'],['Investment (me)','vanguard|fidelity|schwab|e-?trade|robinhood|brokerage|wealthfront|betterment|ira contrib|401k|invest'],['Housing','mortgage|(^| )rent( |$)|(^| )hoa( |$)|property tax|homeowner|realty'],['Utilities','electric|water|gas co|utility|comcast|xfinity|verizon|at&t|internet|sewer|trash|waste|pepco|bge|dominion|spectrum'],['Groceries','grocer|safeway|giant|kroger|whole foods|trader joe|costco|aldi|wegmans|publix|harris teeter|walmart|market'],['Dining','restaurant|cafe|coffee|starbucks|mcdonald|doordash|ubereats|grubhub|pizza|chipotle|taco|grill|diner'],['Transportation','shell|exxon|chevron|sunoco|gas station|fuel|uber|lyft|parking|toll|ezpass|e-zpass|metro|car wash|dmv|auto'],['Medical','doctor|dental|dentist|medical|hospital|clinic|pharmac|cvs|walgreens|labcorp|quest diag|vision|orthodont|therap|urgent care|physician'],['Healthcare','health|medicare|wellness'],['Insurance','insurance|geico|state farm|allstate|progressive|usaa'],['Entertainment','netflix|spotify|hulu|disney|theat|cinema|movie|hbo|youtube|steam|ticketmaster|apple.com/bill'],['Shopping','amazon|target|best buy|home depot|lowe|etsy|ebay|ikea|tj maxx|marshalls|kohl'],['Travel','airline|delta|united air|american air|southwest|hotel|marriott|hilton|airbnb|expedia|booking'],['Education','tuition|school|university|college|coursera|udemy'],['Kid allowance','allowance|chore'],['Personal & family','salon|barber|gym|fitness|childcare|daycare|(^| )pet|(^| )vet( |$)'],['Gifts & charity','donat|charity|church|gofundme|red cross'],['Taxes','(^| )irs( |$)|treasury|(^| )tax( |$)|comptroller']];
+const RN={Transportation:'Gas & auto',Utilities:'Bills & utilities',Healthcare:'Health & wellness',Dining:'Restaurants',Housing:'Home'};
+const CARD=[['Fees & interest','interest charge|finance charge|annual fee|late fee|foreign transaction']].concat(HOME.map(x=>[RN[x[0]]||x[0],x[1]]));
+const RENT=[['Advertising','advertis|zillow|apartments.com|listing'],['Auto and travel','mileage|fuel|parking'],['Cleaning and maintenance','clean|maid|janitor|lawn|landscap|snow|pest|plumb|hvac'],['Commissions','commission|leasing fee'],['Insurance','insurance'],['Legal and professional fees','attorney|legal|cpa|accountant|tax prep|eviction'],['Management fees','management|property manager'],['Mortgage interest','mortgage|loan interest'],['Other interest','interest'],['Repairs','repair|handyman|home depot|lowe|contractor|roof|paint|appliance'],['Supplies','supply|supplies|amazon|hardware'],['Taxes','property tax|county|city of|(^| )tax( |$)'],['Utilities','electric|water|gas|sewer|trash|internet|utility']];
+const cmp=a=>a.map(x=>[x[0],new RegExp(x[1],'i')]),LH=cmp(HOME),LC=cmp(CARD),LR=cmp(RENT);
+const XF=/transfer|xfer|payment.?thank|thank you|card payment|crcardpmt|epayment|payment received|(credit card|amex|chase|citi|discover|capital one|barclays|wells fargo).*(pmt|payment|autopay)/i,EX=/refund|claim|settlement|irs treas|down ?payment|closing|escrow|wire|bonus|sale of|proceeds|reimburs|tuition/i;
+const pd=s=>{s=(s||'').trim();let m=s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');m=s.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(m){let y=m[3];if(y.length==2)y='20'+y;return y+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0')}m=s.match(/^(\d{4})(\d{2})(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];const d=new Date(s);return isNaN(d)?null:d.toISOString().slice(0,10)};
+const pn=s=>{s=String(s||'').trim();if(!s)return NaN;const x=parseFloat(s.replace(/[^0-9.]/g,''));return /^\(.*\)$/.test(s)||/-/.test(s)?-x:x};
+function csvRows(t){return t.split(/\r?\n/).filter(l=>l.trim()).map(l=>{const o=[];let c='',q=false;for(const ch of l){if(ch=='"')q=!q;else if(ch==','&&!q){o.push(c);c=''}else c+=ch}o.push(c);return o.map(x=>x.trim())})}
+function parseFile(f){const t=f.text,out=[];
+ if(/<STMTTRN>/i.test(t)){(t.match(/<STMTTRN>[\s\S]*?(?=<\/STMTTRN>|<STMTTRN>|<\/BANKTRANLIST>|$)/gi)||[]).forEach(b=>{const g=k=>(b.match(new RegExp('<'+k+'>([^<\\r\\n]*)','i'))||[])[1];const d=pd(g('DTPOSTED')),a=pn(g('TRNAMT'));if(d&&a)out.push({d,desc:((g('NAME')||'')+' '+(g('MEMO')||'')).trim(),amt:a})});return out}
+ const R=csvRows(t);let hi=R.findIndex(r=>r.some(c=>/date/i.test(c))&&r.some(c=>/amount|debit|credit|withdraw|deposit/i.test(c))),di=0,si=1,ai=-1,db=-1,cr=-1;
+ if(hi>=0){const H=R[hi].map(c=>c.toLowerCase());di=H.findIndex(c=>/date|posted/.test(c));si=H.findIndex(c=>/desc|memo|payee|name|merchant|detail/.test(c));ai=H.findIndex(c=>/^amount/.test(c));db=H.findIndex(c=>/debit|withdraw/.test(c));cr=H.findIndex(c=>/credit|deposit/.test(c));if(ai<0&&db<0&&cr<0)ai=H.length-1}else if(R[0])ai=R[0].length-1;
+ R.slice(hi+1).forEach(r=>{const d=pd(r[di]);if(!d)return;let a=ai>=0?pn(r[ai]):NaN;if(isNaN(a))a=(pn(r[cr])||0)-Math.abs(pn(r[db])||0);if(!a||isNaN(a))return;out.push({d,desc:r[si>=0?si:1]||'',amt:a})});return out}
+function addTx(id,d,desc,amt,kind,fi){const w=desc.toUpperCase().replace(/[^A-Z ]/g,' ').split(/\s+/).filter(x=>x.length>2).slice(0,2).join(' '),l=desc.toUpperCase().replace(/[^A-Z]/g,'').slice(0,24);CF.tx.push({id,d,desc:desc.trim(),amt,fi,kind,mk:w?kind+'|'+w:'',dk:l?kind+'|'+l:'',man:fi<0,ed:!!CF.ed[id]})}
+function build(){const seen=new Set(),th=+$('cth').value||5000,ig=$('cig').checked;CF.tx=[];CF.dups=0;
+ CF.files.forEach((f,fi)=>{const cnt={};parseFile(f).forEach(r=>{if(($('cfr1').value&&r.d<$('cfr1').value)||($('cfr2').value&&r.d>$('cfr2').value))return;const amt=f.flip?-r.amt:r.amt,key=r.d+'|'+amt.toFixed(2)+'|'+r.desc.toUpperCase().replace(/[^A-Z]/g,'').slice(0,18),id=key+'#'+(cnt[key]=(cnt[key]||0)+1);if(seen.has(id)){CF.dups++;return}seen.add(id);
+  const e=CF.ed[id]||{};addTx(id,e.d||r.d,e.desc!==undefined?e.desc:r.desc.trim(),e.amt!==undefined?e.amt:amt,e.kind||f.kind,fi)})});
+ CF.man.forEach(m=>addTx('M'+m.n,m.d,m.desc,m.amt,m.kind,-1));
+ CF.custom.forEach(c=>{const k=(c.kw||'').split(',').map(x=>x.trim().replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).filter(Boolean);c.re=k.length?new RegExp(k.join('|'),'i'):null});
+ CF.tx.forEach((t,i)=>{t.i=i;const o=CF.ov[t.id]||{},L=t.kind=='rental'?LR:t.kind=='card'?LC:LH;
+  const cu=CF.custom.find(c=>c.re&&c.re.test(t.desc));t.cu=!!cu&&!o.cat&&!CF.ovm[t.dk];t.cat=o.cat||CF.ovm[t.dk]||(cu?cu.n:t.amt>0?(t.kind=='rental'?'Rents received':t.kind=='card'?'Refund / credit':'Income'):((L.find(x=>x[1].test(t.desc))||[t.kind=='rental'?'Other expenses':'Uncategorized'])[0]));
+  t.xf=t.cat=='Transfer'||(XF.test(t.desc)&&!/^Investment/.test(t.cat)&&!t.cu);t.ex=!t.xf&&(Math.abs(t.amt)>=th||EX.test(t.desc));t.ig=o.ig!==undefined?o.ig:(t.xf||(t.ex&&ig))})}
+function cfNums(){if(!CF.tx.length)return null;const A=CF.tx.filter(t=>!t.ig),ds=CF.tx.map(t=>t.d).sort(),months=Math.max(1,((new Date(ds[ds.length-1])-new Date(ds[0]))/864e5+1)/30.44),yf=12/months,sum=f=>A.filter(f).reduce((s,t)=>s+Math.abs(t.amt),0)*yf,rf=f=>sum(t=>t.kind!='rental'&&f(t));
+ const refunds=sum(t=>t.kind=='card'&&t.amt>0);return{months,yf,spendAll:rf(t=>t.amt<0)-refunds,spendNoTax:rf(t=>t.amt<0&&t.cat!='Taxes'&&!/^Investment/.test(t.cat))-refunds,inc:sum(t=>t.amt>0&&t.kind=='bank'),rent:sum(t=>t.kind=='rental'&&t.amt>0)-sum(t=>t.kind=='rental'&&t.amt<0)}}
+function flist(){$('cfl').innerHTML=CF.files.map((f,i)=>`<div class="row"><span style="flex:3;overflow:hidden;text-overflow:ellipsis" title="${esc(f.name)}">${esc(f.name)}</span><select style="flex:2" onchange="CF.files[${i}].kind=this.value;cf()">${[['bank','Bank'],['card','Credit card'],['rental','Rental']].map(([k,n])=>`<option value="${k}"${f.kind==k?' selected':''}>${n}</option>`).join('')}</select><label style="margin:0;white-space:nowrap"><input type="checkbox" style="width:auto" ${f.flip?'checked':''} onchange="CF.files[${i}].flip=this.checked;cf()"> flip sign</label><button class="s" onclick="CF.files.splice(${i},1);cf()">×</button></div>`).join('')+(CF.files.length?`<div class="n">${CF.tx.length} unique transactions · ${CF.dups} duplicates removed. If spending shows as income, tick flip sign.</div>`:'')}
+function cfOpen(el){el.open?CF.op.add(el.dataset.k):CF.op.delete(el.dataset.k)}
+function summ(N){const pm=+$('cfp').value||1,lab={1:'Per month',3:'Per quarter',12:'Per year'}[pm],pv=x=>x/N.months*pm,sm=a=>a.reduce((s,t)=>s+Math.abs(t.amt),0);let h='';
+ const grp=rows=>{const c={};rows.forEach(t=>{const g=c[t.cat]=c[t.cat]||{tot:0,m:{}},a=Math.abs(t.amt),mk=t.dk||t.id,m=g.m[mk]=g.m[mk]||{n:t.desc,tot:0,tx:[]};g.tot+=a;m.tot+=a;m.tx.push(t)});return c};
+ const row=(n,tot,T)=>`<span>${n}</span><span>${fmt(tot)}</span><span>${fmt(pv(tot))}</span><span>${T?pc(tot/T):''}</span>`;
+ const blk=(c,T,pre)=>Object.entries(c).sort((a,b)=>b[1].tot-a[1].tot).map(([name,g])=>{const key=pre+'|'+name;return `<details data-k="${esc(key)}" ${CF.op.has(key)?'open':''} ontoggle="cfOpen(this)"><summary>${row(esc(name),g.tot,T)}</summary>${Object.entries(g.m).sort((a,b)=>b[1].tot-a[1].tot).map(([mk,m])=>{const k2=key+'|'+mk;return `<details data-k="${esc(k2)}" ${CF.op.has(k2)?'open':''} ontoggle="cfOpen(this)"><summary>${row(esc(m.n)+' ('+m.tx.length+')',m.tot,0)}</summary>${m.tx.slice().sort((a,b)=>b.d.localeCompare(a.d)).map(t=>`<div class="tl"><span>${t.d}</span><span>${esc(t.desc)}</span><span>${fmt(Math.abs(t.amt))}</span></div>`).join('')}</details>`}).join('')}</details>`}).join('');
+ [['bank','Home spending (bank accounts)'],['card','Credit card spending by category'],['rental','Rental property (IRS Schedule E)']].forEach(([k,title])=>{if(!CF.tx.some(t=>t.kind==k))return;const A=CF.tx.filter(t=>t.kind==k&&!t.ig),ins=A.filter(t=>t.amt>0),outs=A.filter(t=>t.amt<0),ti=sm(ins),to=sm(outs);
+  h+=`<h2 style="margin-top:12px">${title}</h2><div class="dd"><div class="hd"><span>Category</span><span>Total</span><span>${lab}</span><span>Share</span></div>${ti?'<div class="sub"><span>Inflows</span></div>'+blk(grp(ins),ti,k+'|in')+`<div class="tot">${row('Total inflows',ti,0)}</div>`:''}${to?'<div class="sub"><span>Outflows</span></div>'+blk(grp(outs),to,k+'|out')+`<div class="tot">${row('Total outflows',to,0)}</div>`:''}${ti&&to?`<div class="tot">${row('Net',ti-to,0)}</div>`:''}</div>`});
+ return `<div class="n">Data spans ${N.months.toFixed(1)} months. Click a category to see merchants, then a merchant to see its transactions. Ignored lines (duplicates, transfers, exceptional) are excluded.</div>`+h}
+function sugg(N){const T=CF.tx;if(!T.length)return['Drop statement files to get suggestions. Twelve months of data captures annual bills such as insurance, property tax and travel.'];
+ const S=[],act=T.filter(t=>!t.ig),has=c=>act.some(t=>t.kind!='rental'&&t.amt<0&&t.cat==c),sp=a=>fmt(a.reduce((s,t)=>s+Math.abs(t.amt),0)),v=read();
+ if(N.months<11)S.push(`Only ${N.months.toFixed(1)} months of data. Annual or seasonal costs (insurance, property tax, travel, holidays) may be missing. Add up to 12 months for reliable annualized figures.`);
+ const ms={};T.filter(t=>t.fi>=0).forEach(t=>{(ms[t.fi]=ms[t.fi]||new Set()).add(t.d.slice(0,7))});
+ Object.entries(ms).forEach(([fi,set])=>{const a=[...set].sort(),miss=[];let[y,m]=a[0].split('-').map(Number);const k=()=>y+'-'+String(m).padStart(2,'0');while(k()<a[a.length-1]){if(!set.has(k()))miss.push(k());m++;if(m>12){m=1;y++}}if(miss.length)S.push(`${esc(CF.files[fi].name)} has no transactions in ${miss.slice(0,6).join(', ')}${miss.length>6?' and more':''}. A statement may be missing.`)});
+ const un=act.filter(t=>t.cat=='Uncategorized');if(un.length)S.push(`${un.length} transactions (${sp(un)}) are Uncategorized. Assign a category below; it applies to the same merchant.`);
+ const fx=T.filter(t=>t.ex&&t.ig);if(fx.length)S.push(`${fx.length} flagged exceptional items (${sp(fx)}) are being ignored. Review them in the transaction list in case some are recurring.`);
+ const fk=T.filter(t=>t.ex&&!t.ig);if(fk.length)S.push(`${fk.length} flagged exceptional items (${sp(fk)}) are included in the totals. Untick any that are one-time.`);
+ const xf=T.filter(t=>t.xf);if(xf.length)S.push(`${xf.length} transfer or card-payment lines were ignored to avoid double counting. Confirm none are real spending.`);
+ if(CF.dups)S.push(`${CF.dups} duplicate rows from overlapping statements were removed.`);
+ if(T.some(t=>t.kind!='rental')){
+  if(!has('Housing')&&!has('Home'))S.push('No housing payment (mortgage, rent, HOA, property tax) was found. If it is paid from an account you have not imported, add that account.');
+  if(!has('Insurance'))S.push('No insurance premiums found (home, auto, umbrella, life). These are often billed annually or by escrow.');
+  if(!has('Healthcare')&&!has('Health & wellness')&&!has('Medical'))S.push('No healthcare spending found.'+(v.ret<65?' You retire before Medicare at 65, so budget for private or ACA coverage.':' In retirement, budget for Medicare premiums and out-of-pocket costs.'));
+  if(!has('Taxes'))S.push('No tax payments found. Property tax paid via escrow or income tax paid via withholding will not show in spending. The planner models income tax separately.');
+  const g={};act.filter(t=>t.kind!='rental'&&t.amt<0&&t.mk).forEach(t=>{(g[t.mk]=g[t.mk]||[]).push(t)});
+  const rec=Object.values(g).filter(a=>new Set(a.map(t=>t.d.slice(0,7))).size>=3&&Math.max(...a.map(t=>-t.amt))-Math.min(...a.map(t=>-t.amt))<=.15*Math.abs(a[0].amt)).sort((a,b)=>b.length-a.length);
+  if(rec.length)S.push(`${rec.length} recurring charges detected (about ${fmt(rec.reduce((s,a)=>s+Math.abs(a[0].amt),0))} per month), for example ${rec.slice(0,4).map(a=>esc(a[0].desc.slice(0,22))).join(', ')}. Check for subscriptions you no longer use.`);
+  if(N.inc>0&&N.spendAll>N.inc)S.push(`Statement spending (${fmt(N.spendAll)}/yr) exceeds statement income (${fmt(N.inc)}/yr). Income from another account may be missing.`);
+  if(v.want!==''&&N.spendNoTax>0)S.push(`Planner desired income is ${fmt(v.want)} (today’s $, before tax) and statement spending is ${fmt(N.spendNoTax)}/yr before tax. Use the button under the projection to align them.`)}
+ if(T.some(t=>t.kind=='rental')){const m=['Insurance','Taxes','Repairs','Mortgage interest','Utilities'].filter(c=>!act.some(t=>t.kind=='rental'&&t.cat==c));if(m.length)S.push(`Rental: no ${m.join(', ')} expenses found. Check for annual or escrow-paid items.`);S.push('Rental: depreciation (Schedule E line 18) is non-cash and will not appear in statements. Mortgage principal is not deductible; only the interest is. Rental income is not taxed in the planner unless you push it to Other income.')}
+ return S}
+function cfSort(k){CF.sort=CF.sort.k==k?{k,d:-CF.sort.d}:{k,d:k=='d'?-1:1};txtab()}
+function txtab(){const fl=$('cff').value,S=CF.sort,key=t=>({u:t.ig?1:0,d:t.d,desc:t.desc.toLowerCase(),kind:t.kind,cat:t.cat,amt:t.amt,fl:t.xf?'transfer':t.ex?'exceptional':''})[S.k],
+ all=CF.tx.filter(t=>fl=='all'||t.id==CF.edit||(fl=='ex'&&t.ex)||(fl=='xf'&&t.xf)||(fl=='un'&&t.cat=='Uncategorized')||(fl=='ig'&&t.ig)).sort((a,b)=>{const x=key(a),y=key(b);return(x<y?-1:x>y?1:0)*S.d}),T=all.slice(0,250),
+ th=(k,l)=>`<th style="cursor:pointer" onclick="cfSort('${k}')">${l}${S.k==k?(S.d>0?' \u25b2':' \u25bc'):''}</th>`;
+ $('ccl').innerHTML=CF.custom.map((c,j)=>`<span class="n" style="border:1px solid var(--bd);border-radius:12px;padding:2px 8px;margin:0 4px 4px 0;display:inline-block">${esc(c.n)}${c.kw?' ('+esc(c.kw)+')':''} <span style="cursor:pointer" title="Remove category" onclick="cfDelCat(${j})">\u00d7</span></span>`).join('');
+ $('ctx').innerHTML='<tr>'+th('u','Ignored')+th('d','Date')+th('desc','Description')+th('kind','Kind')+th('cat','Category')+th('amt','Amount')+th('fl','Flag')+'<th>Actions</th></tr>'+T.map(t=>{
+  if(t.id==CF.edit)return `<tr><td></td><td><input id="e_d" type="date" value="${t.d}" style="width:auto"></td><td style="text-align:left"><input id="e_desc" value="${esc(t.desc)}"></td><td><select id="e_k" style="width:auto">${['bank','card','rental'].map(k=>`<option${k==t.kind?' selected':''}>${k}</option>`).join('')}</select></td><td>${esc(t.cat)}</td><td><input id="e_a" type="number" step="0.01" value="${t.amt}" title="Negative = outflow" style="width:100px"></td><td colspan="2"><button onclick="cfEditSave(${t.i})">Save</button> <button class="s" onclick="CF.edit=null;txtab()">Cancel</button></td></tr>`;
+  const L=t.kind=='rental'?LR:t.kind=='card'?LC:LH,cats=[...new Set(L.map(x=>x[0]).concat(CF.custom.map(c=>c.n),['Uncategorized','Other expenses','Income','Refund / credit','Rents received','Transfer'],[t.cat]))],fg=[t.xf?'transfer':t.ex?'exceptional':'',t.ed?'edited':'',t.man?'manual':''].filter(Boolean).join(', ');
+  return `<tr><td style="text-align:center"><input type="checkbox" style="width:auto" title="Use this transaction" ${t.ig?'':'checked'} onchange="cfIg(${t.i},this.checked)"></td><td>${t.d}</td><td style="text-align:left;max-width:260px;overflow:hidden;text-overflow:ellipsis" title="${esc(t.desc)}">${esc(t.desc)}</td><td>${t.kind}</td><td><select style="width:auto;padding:2px" onchange="cfCat(${t.i},this.value)">${cats.map(c=>`<option${c==t.cat?' selected':''}>${esc(c)}</option>`).join('')}</select></td><td class="${t.amt<0?'':'g'}">${fmt(t.amt)}</td><td>${fg}</td><td><button class="s" onclick="cfEdit(${t.i})">Edit</button>${t.man?` <button class="s" title="Delete" onclick="cfDel(${t.i})">\u00d7</button>`:''}${t.ed&&!t.man?` <button class="s" title="Revert to imported values" onclick="cfRevert(${t.i})">\u21ba</button>`:''}</td></tr>`}).join('')+(all.length>250?`<tr><td colspan="8">Showing 250 of ${all.length}. Use the filter to narrow.</td></tr>`:'')}
+function cfEdit(i){CF.edit=CF.tx[i].id;txtab()}
+function cfEditSave(i){const t=CF.tx[i],d=$('e_d').value,a=parseFloat($('e_a').value);if(!d||isNaN(a)){$('cfm').textContent='Enter a valid date and amount.';return}const o={d,desc:$('e_desc').value,amt:a,kind:$('e_k').value};if(t.man)Object.assign(CF.man.find(x=>'M'+x.n==t.id),o);else CF.ed[t.id]=o;CF.edit=null;cf()}
+function cfRevert(i){delete CF.ed[CF.tx[i].id];cf()}
+function cfDel(i){const id=CF.tx[i].id;CF.man=CF.man.filter(x=>'M'+x.n!=id);if(CF.edit==id)CF.edit=null;cf()}
+function cfAddTx(){const n=++CF.mn;CF.man.push({n,d:new Date().toISOString().slice(0,10),desc:'',amt:0,kind:'bank'});CF.edit='M'+n;$('cff').value='all';cf()}
+function cfAddCat(){const n=$('ncn').value.trim();if(!n||CF.custom.some(c=>c.n.toLowerCase()==n.toLowerCase()))return;CF.custom.push({n,kw:$('nck').value.trim()});$('ncn').value='';$('nck').value='';cf()}
+function cfDelCat(j){CF.custom.splice(j,1);cf()}
+function cfIg(i,chk){const t=CF.tx[i];(CF.ov[t.id]=CF.ov[t.id]||{}).ig=!chk;cf()}
+function cfCat(i,val){const t=CF.tx[i];if($('cfa').checked&&t.dk){CF.ovm[t.dk]=val;CF.tx.forEach(x=>{if(x.dk==t.dk&&CF.ov[x.id])delete CF.ov[x.id].cat})}else(CF.ov[t.id]=CF.ov[t.id]||{}).cat=val;cf()}
+function proj(N){const v=read(),a0=age0(v);if(!(v.death>a0)){$('ckp').innerHTML='';return}
+ const P=sim(v,true).rows,pl=$('cpm').value=='pl',fac=(+$('crf').value||100)/100,ov=$('cs').value,base=ov!==''?+ov:N?(pl?N.spendNoTax:N.spendAll):0,rent=$('crn').checked&&N?N.rent:0,inc0=N?N.inc:0;
+ $('chz').textContent=`Horizon: age ${a0} to ${v.death} (from the planner: current age to expected age of death). Retirement at ${v.ret}. Living spending starts at ${fmt(base)}/yr in today’s dollars and is inflated at ${v.inf}%.`;
+ const R=P.map(r=>{const liv=base*r.f*(r.a>=v.ret?fac:1),rn=rent*r.f,inc=pl?r.wages+r.ss+r.pen+r.oth+Math.max(0,r.ev)+rn:inc0*r.f+rn,wd=pl?r.wd:0,tax=pl?r.tax:0,ctb=pl?r.ctb:0,i=inc+wd,o=tax+liv+r.spd+ctb;return{a:r.a,y:new Date().getFullYear()+r.a-a0,inc,wd,tax,liv,pln:r.spd,ctb,i,o,net:i-o}});
+ const sh=R.filter(x=>x.net<-1),tot=R.reduce((s,x)=>s+x.net,0);
+ $('ckp').innerHTML=[['Years with shortfall',sh.length+' of '+R.length],['First shortfall',sh.length?'Age '+sh[0].a:'None'],['Average annual net',fmt(tot/R.length)],['Cumulative net',`<span class="${tot>=0?'g':'r'}">${fmt(tot)}</span>`]].map(x=>`<div><span>${x[0]}</span><b>${x[1]}</b></div>`).join('');
+ drawChart('cf',R.map(x=>x.a),[{n:'Cash in',c:'var(--g)',v:R.map(x=>x.i),w:2.5},{n:'Cash out',c:'var(--r)',v:R.map(x=>x.o),w:2.5}],null,marks(v,a0));
+ $('ctb').innerHTML='<tr><th>Age</th><th>Year</th><th>Income</th><th>Portfolio withdrawals</th><th>Taxes</th><th>Living</th><th>Planned</th><th>Savings</th><th>Net</th></tr>'+R.map(x=>`<tr><td>${x.a}</td><td>${x.y}</td><td>${fmt(x.inc)}</td><td>${fmt(x.wd)}</td><td>${fmt(x.tax)}</td><td>${fmt(x.liv)}</td><td>${fmt(x.pln)}</td><td>${fmt(x.ctb)}</td><td class="${x.net<-1?'r':'g'}">${fmt(x.net)}</td></tr>`).join('')}
+function pushWant(){const N=CF.N,v=read(),base=$('cs').value!==''?+$('cs').value:N?N.spendNoTax:0;if(!base){$('cpn').textContent='No spending found yet. Import statements or enter a spending override.';return}
+ const P=sim(v,true).rows,r=P.find(x=>x.a>=v.ret)||P[P.length-1],w=Math.round(base*(+$('crf').value||100)/100+r.tax/r.f);$('f_want').value=w;run();cf();$('cpn').textContent='Planner desired income set to '+fmt(w)+' (today’s $, before tax): living spending plus estimated retirement-year tax. Adjust it on the Planner tab.'}
+function pushOth(){const N=CF.N;if(!N||!N.rent){$('cpn').textContent='No rental income found yet.';return}$('f_oth').value=Math.round(N.rent);$('crn').checked=false;run();cf();$('cpn').textContent='Planner other income set to '+fmt(N.rent)+'/yr (taxable, flat). Net rental is now counted by the planner, so it is excluded here to avoid double counting.'}
+function cf(){build();const N=CF.N=cfNums();flist();$('cfs').innerHTML=N?summ(N):'<div class="n">No statements loaded yet.</div>';$('sg').innerHTML=sugg(N).map(s=>`<li>${s}</li>`).join('')||'<li>No issues found.</li>';txtab();proj(N)}
+async function addFiles(fl){for(const f of fl){const o={name:f.name,text:await f.text(),kind:$('ck').value},r=parseFile(o);o.flip=o.kind=='card'&&r.filter(x=>x.amt>0).length>r.filter(x=>x.amt<0).length*1.5;CF.files.push(o)}cf()}
+function cfSave(){try{localStorage.setItem('rtp_cf',JSON.stringify({files:CF.files,ov:CF.ov,ovm:CF.ovm,ed:CF.ed,man:CF.man,mn:CF.mn,custom:CF.custom}));$('cfm').textContent='Saved in this browser, including statement text. Use Clear all to remove it.'}catch(e){$('cfm').textContent='Could not save (storage unavailable or full).'}}
+function cfLoad(){try{const s=JSON.parse(localStorage.getItem('rtp_cf')||'null');if(!s){$('cfm').textContent='Nothing saved.';return}CF.files=s.files;CF.ov=s.ov;CF.ovm=s.ovm;CF.ed=s.ed||{};CF.man=s.man||[];CF.mn=s.mn||0;CF.custom=s.custom||[];cf()}catch(e){$('cfm').textContent='Could not load.'}}
+function cfClear(){CF.files=[];CF.ov={};CF.ovm={};CF.ed={};CF.man=[];CF.custom=[];CF.edit=null;try{localStorage.removeItem('rtp_cf')}catch(e){}cf()}
+{const dz=$('dz');dz.onclick=()=>$('cfile').click();dz.ondragover=e=>{e.preventDefault();dz.style.borderColor='var(--ac)'};dz.ondragleave=()=>dz.style.borderColor='';dz.ondrop=e=>{e.preventDefault();dz.style.borderColor='';addFiles(e.dataTransfer.files)};$('cfile').onchange=e=>{addFiles(e.target.files);e.target.value=''}}
+['accts','chg','deps','events','spend'].forEach(draw);sl();run();
+</script></body></html>
